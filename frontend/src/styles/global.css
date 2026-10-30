@@ -1,0 +1,114 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--color-text-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-text-primary);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.t-display {
+  font: 400 56px/64px var(--font-display);
+}
+
+.t-h1 {
+  font: 400 36px/44px var(--font-display);
+}
+
+.t-h2 {
+  font: 400 24px/32px var(--font-display);
+}
+
+.t-number {
+  font: 300 40px/44px var(--font-display);
+}
+
+.t-h3 {
+  font: 600 18px/26px var(--font-body);
+}
+
+.t-body {
+  font: 400 16px/24px var(--font-body);
+}
+
+.t-small {
+  font: 400 14px/20px var(--font-body);
+}
+
+.t-caption {
+  font: 500 13px/18px var(--font-body);
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 767px) {
+  .t-display {
+    font-size: 32px;
+    line-height: 38px;
+  }
+
+  .t-h1 {
+    font-size: 24px;
+    line-height: 30px;
+  }
+
+  .t-h2 {
+    font-size: 20px;
+    line-height: 26px;
+  }
+
+  .t-number {
+    font-size: 32px;
+    line-height: 36px;
+  }
+
+  .t-h3 {
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  .t-body {
+    font-size: 15px;
+    line-height: 22px;
+  }
+}
