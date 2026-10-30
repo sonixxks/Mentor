@@ -1,0 +1,90 @@
+:root {
+  /* ---------- Фоны ---------- */
+  --color-bg-base: #05070f; /* сайт */
+  --color-bg-page: #030923; /* сайдбар, панели */
+  --color-bg-card: #0a1433; /* карточки, поля */
+  --color-bg-card-raised: #121d45; /* hover, всплывающие плашки */
+  --color-bg-navy: #041a53; /* аватары, фото-заглушки */
+  --color-bg-inverse: #ffffff; /* главная кнопка */
+  --color-bg-inverse-hover: #dce4ff;
+  --color-bg-subtle: rgba(255, 255, 255, 0.08);
+
+  /* ---------- Акцент ---------- */
+  --color-accent-primary: #0059ff; /* акцентная кнопка, активное состояние */
+  --color-accent-hover: #4d8dff;
+  --color-accent-royal: #2342e0; /* градиенты */
+  --color-accent-light: #6b8cff; /* ссылки, активные иконки */
+  --color-accent-highlight: #f2e9da; /* блик в свечении */
+  --color-accent-primary-bg: rgba(0, 89, 255, 0.2); /* бейдж совместимости */
+  --color-accent-selected-bg: rgba(0, 89, 255, 0.1); /* выбранная карточка */
+
+  /* ---------- Текст ---------- */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a3adcf;
+  --color-text-muted: #7c87b0; /* плейсхолдеры, подписи */
+  --color-text-accent: #8fb0ff;
+  --color-text-inverse: #05070f; /* текст на белой кнопке */
+  --color-text-on-accent-soft: #d6e2ff; /* второстепенный текст на синем */
+
+  /* ---------- Обводки ---------- */
+  --color-border-default: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-border-stronger: rgba(255, 255, 255, 0.24);
+
+  /* ---------- Статусы ---------- */
+  --color-success: #2ed3a0;
+  --color-warning: #ffb547;
+  --color-danger: #ff5c7a;
+  --color-review: #8fb0ff;
+  --color-success-bg: rgba(46, 211, 160, 0.14);
+  --color-warning-bg: rgba(255, 181, 71, 0.14);
+  --color-danger-bg: rgba(255, 92, 122, 0.14);
+  --color-review-bg: rgba(107, 140, 255, 0.16);
+
+  /* ---------- Градиенты и эффекты ---------- */
+  --gradient-accent: linear-gradient(140deg, #0059ff 0%, #2342e0 50%, #041a53 100%);
+  --gradient-glow: radial-gradient(
+    ellipse at 50% 62%,
+    #f2e9da 0%,
+    #6b8cff 20%,
+    #2342e0 42%,
+    rgba(4, 26, 83, 0.55) 62%,
+    rgba(5, 7, 15, 0) 75%
+  );
+  --glass-bg: rgba(10, 20, 51, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --glass-blur: 24px;
+  --focus-ring: 0 0 0 4px rgba(0, 89, 255, 0.22);
+
+  /* ---------- Скругления ---------- */
+  --radius-sm: 8px; /* мелкие элементы */
+  --radius-md: 12px; /* фото, аватары */
+  --radius-field: 14px; /* поля ввода, пункты меню */
+  --radius-lg: 20px; /* строки-карточки */
+  --radius-xl: 28px; /* большие карточки, панели */
+  --radius-full: 999px; /* кнопки, теги, бейджи */
+
+  /* ---------- Отступы (сетка 8px) ---------- */
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-48: 48px;
+  --space-64: 64px;
+  --space-80: 80px;
+
+  /* ---------- Размеры ---------- */
+  --control-lg: 52px; /* кнопки и поля L */
+  --control-md: 44px; /* кнопки M, иконки-кнопки */
+  --control-sm: 36px;
+  --sidebar-width: 260px;
+  --topbar-height: 76px;
+  --tabbar-height: 68px;
+
+  /* ---------- Шрифты ---------- */
+  --font-display: 'Unbounded', sans-serif; /* заголовки и крупные цифры */
+  --font-body: 'Montserrat', sans-serif; /* всё остальное */
+}
