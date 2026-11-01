@@ -1,5 +1,5 @@
 
-.PHONY: run build lint fmt test 
+.PHONY: run build lint fmt test db-up db-down db-logs db-reset
 
 BINARY_NAME := api
 MAIN_PATH := ./cmd/api/main.go
@@ -22,4 +22,14 @@ fmt:
 test:
 	go test -v -race ./...
 
+#Docker
+db-up:
+	docker-compose up -d
+db-down:
+	docker-compose down
+db-logs:
+	docker compose logs postgres -f
+db-reset:
+	docker compose down -v
+	docker compose up -d
 
