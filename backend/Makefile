@@ -1,5 +1,5 @@
 
-.PHONY: run build lint fmt test 
+.PHONY: run build lint fmt test db-up db-down db-logs db-reset
 
 BINARY_NAME := api
 MAIN_PATH := ./cmd/api/main.go

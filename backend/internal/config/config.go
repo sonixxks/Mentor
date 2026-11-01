@@ -27,6 +27,7 @@ type DB struct {
 	Password string `env:"DB_PASSWORD" env-required:"true"`
 	Name     string `env:"DB_NAME" env-required:"true"`
 	SSLMode  string `env:"DB_SSL_MODE" env-default:"disable"`
+	MaxConns int32  `env:"DB_MAX_CONNS" env-default:"20"`
 }
 
 func (db DB) DSN() string {
