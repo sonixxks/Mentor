@@ -16,6 +16,7 @@ type Config struct {
 }
 
 type App struct {
+	Host string `env:"APP_HOST" env-default:"127.0.0.1"`
 	Port int    `env:"APP_PORT" env-default:"8080"`
 	Env  string `env:"APP_ENV" env-default:"development"`
 }
