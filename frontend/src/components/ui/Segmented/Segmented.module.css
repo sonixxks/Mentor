@@ -1,0 +1,45 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.group {
+  align-self: flex-start;
+  max-width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-card);
+}
+
+.option {
+  height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: 600 14px var(--font-body);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.option:hover {
+  color: var(--color-text-primary);
+}
+
+.active,
+.active:hover {
+  background: var(--color-bg-inverse);
+  color: var(--color-text-inverse);
+}
