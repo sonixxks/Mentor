@@ -4,13 +4,32 @@
   gap: var(--space-8);
 }
 
+.labelRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-12);
+}
+
 .label {
   font-size: 13px;
   font-weight: 500;
   color: var(--color-text-secondary);
 }
 
+.labelRow a {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.control {
+  position: relative;
+  display: flex;
+}
+
 .input {
+  flex: 1;
+  min-width: 0;
   height: var(--control-lg);
   padding: 0 18px;
   border: 1px solid var(--color-border-strong);
@@ -30,6 +49,10 @@
   box-shadow: var(--focus-ring);
 }
 
+.withToggle {
+  padding-right: 52px;
+}
+
 .invalid {
   border-color: var(--color-danger);
 }
@@ -37,4 +60,36 @@
 .error {
   font-size: 13px;
   color: var(--color-danger);
+}
+
+.input:-webkit-autofill {
+  -webkit-text-fill-color: var(--color-text-primary);
+  -webkit-box-shadow: 0 0 0 1000px var(--color-bg-card) inset;
+  caret-color: var(--color-text-primary);
+  transition: background-color 9999s;
+}
+
+.input:-webkit-autofill:focus {
+  -webkit-box-shadow:
+    0 0 0 1000px var(--color-bg-card) inset,
+    var(--focus-ring);
+}
+
+.toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.toggle:hover {
+  color: var(--color-text-primary);
 }

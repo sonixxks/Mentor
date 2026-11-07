@@ -1,0 +1,104 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  gap: var(--space-16);
+  padding: var(--space-16);
+}
+
+.aside {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 40px 48px 48px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-page);
+}
+
+.glow {
+  position: absolute;
+  left: -30%;
+  right: -30%;
+  bottom: -50%;
+  height: 90%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 40%,
+    #f2e9da 0%,
+    #6b8cff 18%,
+    #2342e0 40%,
+    rgba(4, 26, 83, 0.55) 62%,
+    rgba(5, 7, 15, 0) 75%
+  );
+}
+
+.aside > *:not(.glow) {
+  position: relative;
+}
+
+.intro {
+  margin-top: 80px;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.title {
+  margin: 0;
+  font: 400 40px/48px var(--font-display);
+}
+
+.text {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--color-text-secondary);
+}
+
+.extra {
+  margin-top: auto;
+}
+
+.main {
+  width: 640px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-32) 0;
+}
+
+.mobileLogo {
+  display: none;
+}
+
+.form {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+
+@media (max-width: 1023px) {
+  .aside {
+    display: none;
+  }
+
+  .main {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .mobileLogo {
+    display: block;
+    align-self: flex-start;
+    margin-bottom: var(--space-32);
+  }
+}
