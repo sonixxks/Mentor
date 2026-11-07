@@ -13,11 +13,12 @@ export const router = createBrowserRouter([
   // Главная для гостей будет позже, пока — сразу на вход
   { path: '/', element: <Navigate to="/login" replace /> },
 
+  { path: '/login', element: <LoginPage /> },
+  { path: '/register', element: <RegisterPage /> },
+
   {
     element: <AuthLayout />,
     children: [
-      { path: '/login', element: <LoginPage /> },
-      { path: '/register', element: <RegisterPage /> },
       { path: '/verify-email', element: <VerifyEmailPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
       { path: '/onboarding/:role/:step', element: <OnboardingPage /> },
