@@ -1,0 +1,46 @@
+.steps {
+  display: grid;
+  gap: var(--space-12);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.bar {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.done {
+  color: var(--color-text-secondary);
+}
+
+.done .bar,
+.current .bar {
+  background: var(--color-accent-primary);
+}
+
+.current {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+@media (max-width: 767px) {
+  .name {
+    display: none;
+  }
+  
+  .current .name {
+    display: inline;
+  }
+}
