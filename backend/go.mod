@@ -3,6 +3,7 @@ module github.com/sonixxks/Mentor/backend
 go 1.26.8
 
 require (
+	github.com/go-chi/chi/v5 v5.2.3
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jackc/pgx/v5 v5.12.0
 	github.com/joho/godotenv v1.5.1
