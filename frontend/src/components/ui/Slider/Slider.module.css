@@ -1,0 +1,89 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-12);
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.value {
+  font: 400 16px var(--font-display);
+}
+
+.range {
+  --fill: 0%;
+  width: 100%;
+  height: 24px;
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--color-accent-primary) var(--fill),
+    rgba(255, 255, 255, 0.12) var(--fill)
+  );
+}
+
+.range::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.range::-moz-range-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-accent-primary);
+}
+
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--color-bg-inverse);
+  box-shadow: 0 0 0 4px rgba(0, 89, 255, 0.25);
+}
+
+.range::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-bg-inverse);
+  box-shadow: 0 0 0 4px rgba(0, 89, 255, 0.25);
+}
+
+.range:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 6px rgba(0, 89, 255, 0.5);
+}
+
+.marks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
