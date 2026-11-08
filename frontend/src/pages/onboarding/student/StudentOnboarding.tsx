@@ -8,6 +8,7 @@ import type { StudentAnswers } from '../types'
 import { useDraft } from '../useDraft'
 import { AboutStep } from './AboutStep'
 import styles from '../Onboarding.module.css'
+import { SkillsStep } from './SkillsStep'
 
 function validate(step: number, a: StudentAnswers) {
   if (step === 1) {
@@ -31,6 +32,11 @@ function validate(step: number, a: StudentAnswers) {
 
     if (!a.experience) return 'Выбери опыт работы'
   }
+
+  if (step === 2) {
+    if (a.targetSkills.length === 0) return 'Выбери хотя бы один навык, который хочешь развить'
+  }
+
   return ''
 }
 
@@ -72,8 +78,9 @@ export function StudentOnboarding({ step }: { step: number }) {
       onExit={() => navigate('/login')}
     >
       {step === 1 ? <AboutStep value={draft.value} update={draft.update} /> : null}
+      {step === 2 ? <SkillsStep value={draft.value} update={draft.update} /> : null}
 
-      {step > 1 ? (
+      {step > 2 ? (
         <p className="t-body text-secondary">Поля шага {step} появятся в следующих коммитах.</p>
       ) : null}
 

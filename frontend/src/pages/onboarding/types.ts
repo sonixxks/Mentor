@@ -2,6 +2,10 @@ import { emptySchedule } from '../../components/ui/HourGrid'
 import type { Schedule } from '../../components/ui/HourGrid'
 import { detectTimezone } from '../../lib/timezones'
 
+export type SkillLevel = 'beginner' | 'confident' | 'pro'
+
+export type StudentSkill = { name: string; level: SkillLevel }
+
 export type StudentAnswers = {
   // Шаг 1 · О себе
   lastName: string
@@ -16,8 +20,8 @@ export type StudentAnswers = {
   company: string
   experience: string
   // Шаг 2 · Навыки и интересы
-  skills: string[]
-  interests: string[]
+  targetSkills: string[]
+  currentSkills: StudentSkill[]
   // Шаг 3 · Цели
   goals: string[]
   durationMonths: number
@@ -41,8 +45,8 @@ export const initialStudent: StudentAnswers = {
   position: '',
   company: '',
   experience: '',
-  skills: [],
-  interests: [],
+  targetSkills: [],
+  currentSkills: [],
   goals: [],
   durationMonths: 3,
   success: '',
