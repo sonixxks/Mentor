@@ -9,6 +9,7 @@ import { useDraft } from '../useDraft'
 import { AboutStep } from './AboutStep'
 import styles from '../Onboarding.module.css'
 import { isUrl } from '../../../lib/validation'
+import { SkillsStep } from './SkillsStep'
 
 function validate(step: number, a: MentorAnswers, documents: File[]) {
   if (step === 1) {
@@ -22,6 +23,11 @@ function validate(step: number, a: MentorAnswers, documents: File[]) {
     if (documents.length === 0 && links.length === 0)
       return 'Прикрепите документ или ссылку, подтверждающие опыт'
   }
+
+  if (step === 2) {
+    if (a.skills.length === 0) return 'Добавьте хотя бы один навык'
+  }
+
   return ''
 }
 
@@ -71,8 +77,9 @@ export function MentorOnboarding({ step }: { step: number }) {
           onDocumentsChange={setDocuments}
         />
       ) : null}
+      {step === 2 ? <SkillsStep value={draft.value} update={draft.update} /> : null}
 
-      {step > 1 ? (
+      {step > 2 ? (
         <p className="t-body text-secondary">Поля шага {step} появятся в следующих коммитах.</p>
       ) : null}
 
