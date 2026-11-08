@@ -120,6 +120,33 @@
   color: var(--color-text-muted);
 }
 
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-12);
+  cursor: pointer;
+}
+
+.check input {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--color-accent-primary);
+  cursor: pointer;
+}
+
+.checkText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.checkTitle {
+  font-size: 15px;
+  font-weight: 500;
+}
+
 @media (max-width: 767px) {
   .skillRow {
     display: grid;

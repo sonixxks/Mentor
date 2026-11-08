@@ -11,6 +11,7 @@ import styles from '../Onboarding.module.css'
 import { isUrl } from '../../../lib/validation'
 import { SkillsStep } from './SkillsStep'
 import { FormatStep } from './FormatStep'
+import { TimeStep } from './TimeStep'
 
 function validate(step: number, a: MentorAnswers, documents: File[]) {
   if (step === 1) {
@@ -35,6 +36,12 @@ function validate(step: number, a: MentorAnswers, documents: File[]) {
     if (a.durationFrom < 1 || a.durationTo > MAX_MONTHS || a.durationFrom > a.durationTo)
       return `Проверьте длительность: от 1 до ${MAX_MONTHS} месяцев, «от» не больше «до»`
     if (a.paid && !(Number(a.price) > 0)) return 'Укажите цену за занятие'
+  }
+
+  if (step === 4) {
+    const hasTime = Object.values(a.schedule).some((hours) => hours.length > 0)
+    if (!hasTime) return 'Отметьте хотя бы один удобный час'
+    if (!a.style) return 'Выберите стиль наставничества'
   }
 
   return ''
@@ -88,10 +95,7 @@ export function MentorOnboarding({ step }: { step: number }) {
       ) : null}
       {step === 2 ? <SkillsStep value={draft.value} update={draft.update} /> : null}
       {step === 3 ? <FormatStep value={draft.value} update={draft.update} /> : null}
-
-      {step > 3 ? (
-        <p className="t-body text-secondary">Поля шага {step} появятся в следующих коммитах.</p>
-      ) : null}
+      {step === 4 ? <TimeStep value={draft.value} update={draft.update} /> : null}
 
       {error ? <p className={styles.error}>{error}</p> : null}
     </OnboardingShell>

@@ -6,12 +6,7 @@ import { plural } from '../../../lib/plural'
 import { TIMEZONES } from '../../../lib/timezones'
 import type { StudentAnswers } from '../types'
 import styles from '../Onboarding.module.css'
-
-const STYLES = [
-  { value: 'friendly', title: 'Дружелюбный', description: 'Неформально, поддержка и мотивация' },
-  { value: 'structured', title: 'Структурный', description: 'Чёткий план, дедлайны, отчёты' },
-  { value: 'free', title: 'Свободный', description: 'Встречи по запросу, без жёстких рамок' },
-]
+import { COMMUNICATION_STYLES } from '../styles'
 
 type TimeStepProps = {
   value: StudentAnswers
@@ -48,7 +43,7 @@ export function TimeStep({ value, update }: TimeStepProps) {
       <div className={styles.field}>
         <span className={styles.label}>Стиль общения</span>
         <div className={styles.grid3}>
-          {STYLES.map((item) => (
+          {COMMUNICATION_STYLES.map((item) => (
             <ChoiceCard
               key={item.value}
               title={item.title}
