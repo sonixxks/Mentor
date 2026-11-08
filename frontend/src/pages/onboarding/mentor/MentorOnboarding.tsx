@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { homeByRole, saveSession } from '../../../lib/auth'
 import { OnboardingShell } from '../OnboardingShell'
 import { STEPS } from '../steps'
-import { initialMentor } from '../types'
+import { MAX_MONTHS, initialMentor } from '../types'
 import type { MentorAnswers } from '../types'
 import { useDraft } from '../useDraft'
 import { AboutStep } from './AboutStep'
 import styles from '../Onboarding.module.css'
 import { isUrl } from '../../../lib/validation'
 import { SkillsStep } from './SkillsStep'
+import { FormatStep } from './FormatStep'
 
 function validate(step: number, a: MentorAnswers, documents: File[]) {
   if (step === 1) {
@@ -26,6 +27,14 @@ function validate(step: number, a: MentorAnswers, documents: File[]) {
 
   if (step === 2) {
     if (a.skills.length === 0) return 'Добавьте хотя бы один навык'
+    if (a.goals.length === 0) return 'Выберите, с чем помогаете'
+  }
+
+  if (step === 3) {
+    if (a.studentLevels.length === 0) return 'Выберите уровень учеников'
+    if (a.durationFrom < 1 || a.durationTo > MAX_MONTHS || a.durationFrom > a.durationTo)
+      return `Проверьте длительность: от 1 до ${MAX_MONTHS} месяцев, «от» не больше «до»`
+    if (a.paid && !(Number(a.price) > 0)) return 'Укажите цену за занятие'
   }
 
   return ''
@@ -78,8 +87,9 @@ export function MentorOnboarding({ step }: { step: number }) {
         />
       ) : null}
       {step === 2 ? <SkillsStep value={draft.value} update={draft.update} /> : null}
+      {step === 3 ? <FormatStep value={draft.value} update={draft.update} /> : null}
 
-      {step > 2 ? (
+      {step > 3 ? (
         <p className="t-body text-secondary">Поля шага {step} появятся в следующих коммитах.</p>
       ) : null}
 

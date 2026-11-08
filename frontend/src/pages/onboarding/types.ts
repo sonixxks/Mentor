@@ -6,6 +6,8 @@ export type SkillLevel = 'beginner' | 'confident' | 'pro'
 
 export type StudentSkill = { name: string; level: SkillLevel }
 
+export const MAX_MONTHS = 12
+
 export type StudentAnswers = {
   // Шаг 1 · О себе
   lastName: string
@@ -70,7 +72,6 @@ export type MentorAnswers = {
   links: string[]
   // Шаг 2 · Экспертиза
   skills: MentorSkill[]
-  topics: string[]
   // Шаг 3 · Кого веду (длительность в месяцах)
   studentLevels: string[]
   goals: string[]
@@ -97,7 +98,6 @@ export const initialMentor: MentorAnswers = {
   about: '',
   links: [''],
   skills: [],
-  topics: [],
   studentLevels: [],
   goals: [],
   durationFrom: 1,

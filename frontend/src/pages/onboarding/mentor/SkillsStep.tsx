@@ -2,7 +2,8 @@ import { X } from 'lucide-react'
 import { Segmented } from '../../../components/ui/Segmented'
 import { Select } from '../../../components/ui/Select'
 import { Tag } from '../../../components/ui/Tag'
-import { SKILLS, TOPICS } from '../skills'
+import { SKILLS } from '../skills'
+import { GOALS } from '../goals'
 import type { MentorAnswers, MentorSkill } from '../types'
 import styles from '../Onboarding.module.css'
 
@@ -17,7 +18,7 @@ type SkillsStepProps = {
 }
 
 export function SkillsStep({ value, update }: SkillsStepProps) {
-  const { skills, topics } = value
+  const { skills, goals } = value
 
   function addSkill(name: string) {
     if (!name) return
@@ -34,11 +35,9 @@ export function SkillsStep({ value, update }: SkillsStepProps) {
     update({ skills: skills.filter((skill) => skill.name !== name) })
   }
 
-  function toggleTopic(topic: string) {
+  function toggleGoal(goal: string) {
     update({
-      topics: topics.includes(topic)
-        ? topics.filter((item) => item !== topic)
-        : [...topics, topic],
+      goals: goals.includes(goal) ? goals.filter((item) => item !== goal) : [...goals, goal],
     })
   }
 
@@ -85,11 +84,15 @@ export function SkillsStep({ value, update }: SkillsStepProps) {
       </div>
 
       <div className={styles.field}>
-        <span className={styles.label}>С чем ещё помогаю</span>
+        <span className={styles.label}>С чем помогаю</span>
         <div className={styles.tags}>
-          {TOPICS.map((topic) => (
-            <Tag key={topic} selected={topics.includes(topic)} onClick={() => toggleTopic(topic)}>
-              {topic}
+          {GOALS.map((goal) => (
+            <Tag
+              key={goal.value}
+              selected={goals.includes(goal.value)}
+              onClick={() => toggleGoal(goal.value)}
+            >
+              {goal.title}
             </Tag>
           ))}
         </div>
