@@ -1,37 +1,22 @@
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-8);
-}
-
-.label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-}
-
-.group {
-  align-self: flex-start;
-  max-width: 100%;
-  display: flex;
+.segmented {
+  display: inline-flex;
   flex-wrap: wrap;
-  gap: 2px;
+  gap: 4px;
   padding: 4px;
-  border: 1px solid var(--color-border-default);
   border-radius: var(--radius-full);
+  border: 1px solid var(--color-border-default);
   background: var(--color-bg-card);
 }
 
 .option {
-  height: 40px;
-  padding: 0 18px;
-  border: 0;
+  padding: 9px 16px;
+  border: 1px solid transparent;
   border-radius: var(--radius-full);
-  background: transparent;
+  background: none;
   color: var(--color-text-secondary);
-  font: 600 14px var(--font-body);
-  cursor: pointer;
+  font: 600 13px/18px var(--font-body);
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .option:hover {
@@ -42,4 +27,23 @@
 .active:hover {
   background: var(--color-bg-inverse);
   color: var(--color-text-inverse);
+}
+
+@media (max-width: 1279px) {
+  .segmented {
+    display: flex;
+    gap: var(--space-8);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+
+  .option {
+    border-color: var(--color-border-strong);
+  }
+
+  .active {
+    border-color: transparent;
+  }
 }

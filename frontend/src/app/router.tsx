@@ -15,13 +15,13 @@ export const router = createBrowserRouter([
 
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
+  { path: '/onboarding/:role/:step', element: <OnboardingPage /> },
 
   {
     element: <AuthLayout />,
     children: [
       { path: '/verify-email', element: <VerifyEmailPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
-      { path: '/onboarding/:role/:step', element: <OnboardingPage /> },
     ],
   },
 

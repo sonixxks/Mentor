@@ -1,0 +1,149 @@
+.page {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: clip;
+}
+
+.glow {
+  position: absolute;
+  right: -220px;
+  top: -420px;
+  width: 900px;
+  height: 620px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 65%,
+    #6b8cff 0%,
+    #2342e0 30%,
+    rgba(4, 26, 83, 0.5) 58%,
+    rgba(5, 7, 15, 0) 74%
+  );
+}
+
+.page > *:not(.glow) {
+  position: relative;
+}
+
+.header {
+  height: 88px;
+  padding: 0 var(--space-80);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.chip {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-primary-bg);
+  color: var(--color-text-accent);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.exit {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  font: 600 14px var(--font-body);
+  cursor: pointer;
+}
+
+.exit:hover {
+  color: var(--color-text-primary);
+}
+
+.steps {
+  padding: 0 var(--space-80);
+}
+
+.main {
+  flex: 1;
+  padding: 40px var(--space-80);
+  display: flex;
+  gap: var(--space-64);
+  align-items: flex-start;
+}
+
+.intro {
+  width: 360px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.text {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--color-text-secondary);
+}
+
+.fields {
+  flex: 1;
+  min-width: 0;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+
+.footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  padding: 20px var(--space-80);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-12);
+  border-top: 1px solid var(--color-border-default);
+  background: rgba(5, 7, 15, 0.85);
+  backdrop-filter: blur(12px);
+}
+
+@media (max-width: 1023px) {
+  .main {
+    flex-direction: column;
+    gap: var(--space-24);
+  }
+
+  .intro {
+    width: auto;
+  }
+
+  .fields {
+    max-width: none;
+    width: 100%;
+  }
+}
+
+@media (max-width: 767px) {
+  .header,
+  .steps,
+  .main,
+  .footer {
+    padding-left: var(--space-16);
+    padding-right: var(--space-16);
+  }
+
+  .chip {
+    display: none;
+  }
+
+  .main {
+    padding-top: var(--space-24);
+  }
+}
