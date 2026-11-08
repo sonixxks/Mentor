@@ -67,7 +67,7 @@ export type MentorAnswers = {
   company: string
   experience: string
   about: string
-  links: string
+  links: string[]
   // Шаг 2 · Экспертиза
   skills: MentorSkill[]
   topics: string[]
@@ -95,7 +95,7 @@ export const initialMentor: MentorAnswers = {
   company: '',
   experience: '',
   about: '',
-  links: '',
+  links: [''],
   skills: [],
   topics: [],
   studentLevels: [],

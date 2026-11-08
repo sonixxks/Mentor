@@ -84,6 +84,35 @@
   flex-shrink: 0;
 }
 
+.linkRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-8);
+}
+
+.linkRow .remove {
+  margin-bottom: 8px;
+}
+
+.linkRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.addLink {
+  align-self: flex-start;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent-light);
+  font: 600 14px var(--font-body);
+  cursor: pointer;
+}
+
+.addLink:hover {
+  color: var(--color-text-primary);
+}
+
 @media (max-width: 767px) {
   .skillRow {
     display: grid;
