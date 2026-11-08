@@ -1,17 +1,56 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { homeByRole, saveSession } from '../../../lib/auth'
 import { OnboardingShell } from '../OnboardingShell'
 import { STEPS } from '../steps'
 import { initialStudent } from '../types'
+import type { StudentAnswers } from '../types'
 import { useDraft } from '../useDraft'
+import { AboutStep } from './AboutStep'
+import styles from '../Onboarding.module.css'
+
+function validate(step: number, a: StudentAnswers) {
+  if (step === 1) {
+    if (!a.lastName.trim() || !a.firstName.trim()) return 'Укажи фамилию и имя'
+
+    const age = Number(a.age)
+    if (!age || age < 14 || age > 99) return 'Укажи возраст от 14 до 99'
+
+    if (!a.status) return 'Выбери, кто ты сейчас'
+
+    if (
+      (a.status === 'student' || a.status === 'graduate') &&
+      (!a.university || !a.direction.trim())
+    )
+      return 'Укажи вуз и направление'
+
+    if (a.status === 'student' && !a.course) return 'Выбери курс'
+
+    if ((a.status === 'junior' || a.status === 'switcher') && !a.position.trim())
+      return 'Укажи должность'
+
+    if (!a.experience) return 'Выбери опыт работы'
+  }
+  return ''
+}
 
 export function StudentOnboarding({ step }: { step: number }) {
   const navigate = useNavigate()
   const draft = useDraft('onboarding-student', initialStudent)
+  const [error, setError] = useState('')
   const steps = STEPS.student
   const isLast = step === steps.length
 
+  function back() {
+    setError('')
+    navigate(`/onboarding/student/${step - 1}`)
+  }
+
   function next() {
+    const message = validate(step, draft.value)
+    setError(message)
+    if (message) return
+
     if (!isLast) {
       navigate(`/onboarding/student/${step + 1}`)
       return
@@ -27,12 +66,18 @@ export function StudentOnboarding({ step }: { step: number }) {
       role="student"
       steps={steps}
       current={step}
-      onBack={step > 1 ? () => navigate(`/onboarding/student/${step - 1}`) : undefined}
+      onBack={step > 1 ? back : undefined}
       onNext={next}
       nextLabel={isLast ? 'Подобрать наставников' : 'Далее'}
       onExit={() => navigate('/login')}
     >
-      <p className="t-body text-secondary">Поля шага {step} появятся в следующих коммитах.</p>
+      {step === 1 ? <AboutStep value={draft.value} update={draft.update} /> : null}
+
+      {step > 1 ? (
+        <p className="t-body text-secondary">Поля шага {step} появятся в следующих коммитах.</p>
+      ) : null}
+
+      {error ? <p className={styles.error}>{error}</p> : null}
     </OnboardingShell>
   )
 }
