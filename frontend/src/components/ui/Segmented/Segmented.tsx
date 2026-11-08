@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import styles from './Segmented.module.css'
 
-type SegmentedOption = { value: string; label: string }
+export type SegmentedOption = { value: string; label: string }
 
 type SegmentedProps = {
   options: SegmentedOption[]
