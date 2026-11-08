@@ -3,23 +3,26 @@ import { Slider } from '../../../components/ui/Slider'
 import { Textarea } from '../../../components/ui/Textarea'
 import type { StudentAnswers } from '../types'
 import styles from '../Onboarding.module.css'
+import { plural } from '../../../lib/plural'
 
 const GOALS = [
-  { value: 'job', title: 'Найти стажировку или работу', description: 'Резюме, портфолио, собеседования' },
+  {
+    value: 'job',
+    title: 'Найти стажировку или работу',
+    description: 'Резюме, портфолио, собеседования',
+  },
   { value: 'skill', title: 'Освоить новый навык', description: 'С нуля до уверенного уровня' },
   { value: 'project', title: 'Сделать проект', description: 'Пет-проект или диплом с поддержкой' },
-  { value: 'interview', title: 'Подготовиться к собеседованию', description: 'Технические и HR-раунды' },
+  {
+    value: 'interview',
+    title: 'Подготовиться к собеседованию',
+    description: 'Технические и HR-раунды',
+  },
   { value: 'switch', title: 'Сменить направление', description: 'Понять, куда расти дальше' },
   { value: 'soft', title: 'Развить soft skills', description: 'Коммуникация, тайм-менеджмент' },
 ]
 
 const MAX_GOALS = 2
-
-function monthsLabel(n: number) {
-  if (n % 10 === 1 && n % 100 !== 11) return `${n} месяц`
-  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return `${n} месяца`
-  return `${n} месяцев`
-}
 
 type GoalsStepProps = {
   value: StudentAnswers
@@ -62,7 +65,7 @@ export function GoalsStep({ value, update }: GoalsStepProps) {
         max={12}
         value={value.durationMonths}
         onChange={(durationMonths) => update({ durationMonths })}
-        format={monthsLabel}
+        format={(n) => plural(n, ['месяц', 'месяца', 'месяцев'])}
       />
 
       <Textarea

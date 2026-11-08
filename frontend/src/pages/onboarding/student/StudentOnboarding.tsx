@@ -10,6 +10,7 @@ import { AboutStep } from './AboutStep'
 import styles from '../Onboarding.module.css'
 import { SkillsStep } from './SkillsStep'
 import { GoalsStep } from './GoalsStep'
+import { TimeStep } from './TimeStep'
 
 function validate(step: number, a: StudentAnswers) {
   if (step === 1) {
@@ -40,6 +41,12 @@ function validate(step: number, a: StudentAnswers) {
 
   if (step === 3) {
     if (a.goals.length === 0) return 'Выбери хотя бы одну цель'
+  }
+
+  if (step === 4) {
+    const hasTime = Object.values(a.schedule).some((hours) => hours.length > 0)
+    if (!hasTime) return 'Отметь хотя бы один удобный час'
+    if (!a.style) return 'Выбери стиль общения'
   }
 
   return ''
@@ -85,10 +92,7 @@ export function StudentOnboarding({ step }: { step: number }) {
       {step === 1 ? <AboutStep value={draft.value} update={draft.update} /> : null}
       {step === 2 ? <SkillsStep value={draft.value} update={draft.update} /> : null}
       {step === 3 ? <GoalsStep value={draft.value} update={draft.update} /> : null}
-
-      {step > 3 ? (
-        <p className="t-body text-secondary">Поля шага {step} появятся в следующих коммитах.</p>
-      ) : null}
+      {step === 4 ? <TimeStep value={draft.value} update={draft.update} /> : null}
 
       {error ? <p className={styles.error}>{error}</p> : null}
     </OnboardingShell>
