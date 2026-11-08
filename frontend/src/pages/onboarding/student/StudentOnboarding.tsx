@@ -9,6 +9,7 @@ import { useDraft } from '../useDraft'
 import { AboutStep } from './AboutStep'
 import styles from '../Onboarding.module.css'
 import { SkillsStep } from './SkillsStep'
+import { GoalsStep } from './GoalsStep'
 
 function validate(step: number, a: StudentAnswers) {
   if (step === 1) {
@@ -21,7 +22,7 @@ function validate(step: number, a: StudentAnswers) {
 
     if (
       (a.status === 'student' || a.status === 'graduate') &&
-      (!a.university || !a.direction.trim())
+      (!a.university.trim() || !a.direction.trim())
     )
       return 'Укажи вуз и направление'
 
@@ -35,6 +36,10 @@ function validate(step: number, a: StudentAnswers) {
 
   if (step === 2) {
     if (a.targetSkills.length === 0) return 'Выбери хотя бы один навык, который хочешь развить'
+  }
+
+  if (step === 3) {
+    if (a.goals.length === 0) return 'Выбери хотя бы одну цель'
   }
 
   return ''
@@ -79,8 +84,9 @@ export function StudentOnboarding({ step }: { step: number }) {
     >
       {step === 1 ? <AboutStep value={draft.value} update={draft.update} /> : null}
       {step === 2 ? <SkillsStep value={draft.value} update={draft.update} /> : null}
+      {step === 3 ? <GoalsStep value={draft.value} update={draft.update} /> : null}
 
-      {step > 2 ? (
+      {step > 3 ? (
         <p className="t-body text-secondary">Поля шага {step} появятся в следующих коммитах.</p>
       ) : null}
 

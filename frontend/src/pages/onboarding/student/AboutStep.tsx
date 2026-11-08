@@ -11,15 +11,6 @@ const STATUSES = [
   { value: 'switcher', label: 'Меняю профессию' },
 ]
 
-const UNIVERSITIES = [
-  { value: 'urfu', label: 'УрФУ' },
-  { value: 'usue', label: 'УрГЭУ' },
-  { value: 'usmu', label: 'УГМУ' },
-  { value: 'uspu', label: 'УрГПУ' },
-  { value: 'usla', label: 'УрГЮУ' },
-  { value: 'other', label: 'Другой' },
-]
-
 const COURSES = ['1', '2', '3', '4', '5', '6'].map((n) => ({ value: n, label: `${n} курс` }))
 
 const EXPERIENCE = [
@@ -81,10 +72,9 @@ export function AboutStep({ value, update }: AboutStepProps) {
 
       {studies ? (
         <div className={styles.grid2}>
-          <Select
+          <Input
             label="Вуз"
-            placeholder="Выбери вуз"
-            options={UNIVERSITIES}
+            placeholder="Например, УрФУ"
             value={value.university}
             onChange={(e) => update({ university: e.target.value })}
           />
@@ -113,7 +103,9 @@ export function AboutStep({ value, update }: AboutStepProps) {
         <div className={styles.grid2}>
           <Input
             label={value.status === 'switcher' ? 'Кем работаешь сейчас' : 'Должность'}
-            placeholder={value.status === 'switcher' ? 'Например, бухгалтер' : 'Например, Junior-разработчик'}
+            placeholder={
+              value.status === 'switcher' ? 'Например, бухгалтер' : 'Например, Junior-разработчик'
+            }
             value={value.position}
             onChange={(e) => update({ position: e.target.value })}
           />
