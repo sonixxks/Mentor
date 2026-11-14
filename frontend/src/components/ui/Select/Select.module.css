@@ -1,0 +1,58 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.control {
+  position: relative;
+  display: flex;
+}
+
+.select {
+  flex: 1;
+  min-width: 0;
+  appearance: none;
+  height: var(--control-lg);
+  padding: 0 48px 0 18px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-field);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font: 400 15px var(--font-body);
+  outline: none;
+  cursor: pointer;
+}
+
+.select:focus {
+  border-color: var(--color-accent-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.placeholder {
+  color: var(--color-text-muted);
+}
+
+.invalid {
+  border-color: var(--color-danger);
+}
+
+.arrow {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+
+.error {
+  font-size: 13px;
+  color: var(--color-danger);
+}

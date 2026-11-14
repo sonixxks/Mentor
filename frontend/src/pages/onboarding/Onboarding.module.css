@@ -1,0 +1,182 @@
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-16);
+}
+
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-16);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.error {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-danger);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skillRow {
+  padding: 12px 12px 12px 20px;
+  border-radius: 16px;
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-card);
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.skillName {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.remove {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.remove:hover {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+}
+
+.addSkill {
+  max-width: 320px;
+}
+
+.level {
+  flex-shrink: 0;
+}
+
+.linkRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-8);
+}
+
+.linkRow .remove {
+  margin-bottom: 8px;
+}
+
+.linkRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.addLink {
+  align-self: flex-start;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent-light);
+  font: 600 14px var(--font-body);
+  cursor: pointer;
+}
+
+.addLink:hover {
+  color: var(--color-text-primary);
+}
+
+.hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-text-muted);
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-12);
+  cursor: pointer;
+}
+
+.check input {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--color-accent-primary);
+  cursor: pointer;
+}
+
+.checkText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.checkTitle {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+@media (max-width: 767px) {
+  .skillRow {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    row-gap: var(--space-8);
+    padding: 12px 8px 12px 16px;
+  }
+
+  .skillName {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .remove {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .level {
+    grid-column: 1 / -1;
+  }
+
+  .addSkill {
+    max-width: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .grid2,
+  .grid3 {
+    grid-template-columns: 1fr;
+  }
+}

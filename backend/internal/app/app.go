@@ -5,22 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net"
-	"net/http"
 	"strconv"
 	"time"
 
+	"net/http"
+
 	"github.com/sonixxks/Mentor/backend/internal/config"
 	"github.com/sonixxks/Mentor/backend/internal/platform/postgres"
-	httptransport "github.com/sonixxks/Mentor/backend/internal/transport/http"
-)
-
-const (
-	readHeaderTimeout = 5 * time.Second
-	readTimeout       = 15 * time.Second
-	writeTimeout      = 30 * time.Second
-	idleTimeout       = 60 * time.Second
-	shutdownTimeout   = 10 * time.Second
+	"github.com/sonixxks/Mentor/backend/internal/transport/rest"
+	"github.com/sonixxks/Mentor/backend/internal/transport/rest/statusroutes"
 )
 
 func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
@@ -28,9 +21,10 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 		"env", cfg.App.Env,
 	)
 
+	//Database
 	poolCfg := postgres.PoolConfig{
-		MaxConns:   cfg.Db.MaxConns,
-		ConnString: cfg.Db.DSN(),
+		MaxConns:   cfg.DB.MaxConns,
+		ConnString: cfg.DB.DSN(),
 	}
 
 	pool, err := postgres.CreatePool(ctx, poolCfg)
@@ -43,44 +37,54 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 		"host", pool.Config().ConnConfig.Host,
 		"port", pool.Config().ConnConfig.Port,
 	)
+	//validator
+	//validate := validation.NewValidator()
 
-	router := httptransport.NewRouter(httptransport.Deps{
-		Logger: lg,
-		DB:     pool,
-	})
+	//services
 
-	srv := &http.Server{
-		Addr:              net.JoinHostPort("", strconv.Itoa(cfg.App.Port)),
-		Handler:           router,
-		ReadHeaderTimeout: readHeaderTimeout,
-		ReadTimeout:       readTimeout,
-		WriteTimeout:      writeTimeout,
-		IdleTimeout:       idleTimeout,
-	}
+	//handlers register
+	serviceHandlers := make([]rest.ServiceHandler, 0)
+	//serviceHandlers = append(serviceHandlers, auth.NewHandler(validate, lg, &authService))
+
+	//router
+	router := rest.NewRouter(serviceHandlers, "v1")
+
+	//status routes
+	healthDB := statusroutes.DBHealthHandler{DBH: pool}
+	router.HandleFunc("GET /health", healthDB.Check)
+
+	//Server
+	srv := rest.BuildServer(cfg.App.Host, strconv.Itoa(cfg.App.Port), router)
 
 	serverErr := make(chan error, 1)
+
 	go func() {
-		lg.Info("HTTP server started", "addr", srv.Addr)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			serverErr <- err
+		lg.Info("Server starting on...",
+			"address", srv.Addr,
+		)
+		if serveErr := srv.ListenAndServe(); serveErr != nil {
+			if !errors.Is(serveErr, http.ErrServerClosed) {
+				serverErr <- serveErr
+			}
 		}
-		close(serverErr)
 	}()
 
 	select {
 	case err := <-serverErr:
-		return fmt.Errorf("http server: %w", err)
+		return fmt.Errorf("server failed: %w", err)
 	case <-ctx.Done():
-		lg.Info("Shutting down HTTP server...")
+		lg.Info("shutdown signal received")
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	// Отдельный контекст ограничивает время на завершение работы
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("http server shutdown: %w", err)
+		return fmt.Errorf("graceful shutdown failed: %w", err)
 	}
 
-	lg.Info("HTTP server stopped")
+	lg.Info("server stopped gracefully")
+
 	return nil
 }

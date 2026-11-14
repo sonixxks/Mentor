@@ -1,0 +1,179 @@
+.card {
+  width: 100%;
+  max-width: 460px;
+  padding: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+
+.wide {
+  max-width: 580px;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.step {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-accent);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12);
+}
+
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-12);
+}
+
+.forgot {
+  align-self: flex-end;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.formError {
+  padding: 12px 14px;
+  border-radius: var(--radius-field);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border-default);
+}
+
+.note {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-text-muted);
+}
+
+.footer {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.footer a {
+  font-weight: 600;
+}
+
+.roles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12);
+}
+
+.role {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: 18px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.roleActive {
+  border-color: var(--color-accent-primary);
+  background: var(--color-accent-selected-bg);
+}
+
+.roleIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--color-bg-navy);
+  color: var(--color-text-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.roleTitle {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.roleText {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-12);
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.check input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--color-accent-primary);
+}
+
+.resend {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 767px) {
+  .card {
+    padding: var(--space-24);
+  }
+
+  .grid2,
+  .grid3 {
+    grid-template-columns: 1fr;
+  }
+}
