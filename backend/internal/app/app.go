@@ -23,8 +23,8 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 
 	//Database
 	poolCfg := postgres.PoolConfig{
-		MaxConns:   cfg.Db.MaxConns,
-		ConnString: cfg.Db.DSN(),
+		MaxConns:   cfg.DB.MaxConns,
+		ConnString: cfg.DB.DSN(),
 	}
 
 	pool, err := postgres.CreatePool(ctx, poolCfg)
