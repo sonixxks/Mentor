@@ -1,8 +1,9 @@
-
 import { useMemo, useState } from 'react'
 import { Check, Clock, Search, Star, X } from 'lucide-react'
 import { Avatar } from '../../components/ui/Avatar/Avatar'
 import styles from './StudentCatalog.module.css'
+import { Input } from '../../components/ui/Input/Input'
+import { Select } from '../../components/ui/Select/Select'
 
 type Mentor = {
   id: number
@@ -148,9 +149,7 @@ export function StudentCatalog() {
         !normalizedQuery ||
         mentor.name.toLowerCase().includes(normalizedQuery) ||
         mentor.position.toLowerCase().includes(normalizedQuery) ||
-        mentor.skills.some((skill) =>
-          skill.toLowerCase().includes(normalizedQuery),
-        )
+        mentor.skills.some((skill) => skill.toLowerCase().includes(normalizedQuery))
 
       const matchesSkills =
         selectedSkills.length === 0 ||
@@ -202,9 +201,7 @@ export function StudentCatalog() {
 
   const toggleSkill = (skill: string) => {
     setSelectedSkills((current) =>
-      current.includes(skill)
-        ? current.filter((item) => item !== skill)
-        : [...current, skill],
+      current.includes(skill) ? current.filter((item) => item !== skill) : [...current, skill],
     )
   }
 
@@ -221,9 +218,7 @@ export function StudentCatalog() {
   }
 
   const sendRequest = (id: number) => {
-    setSentRequests((current) =>
-      current.includes(id) ? current : [...current, id],
-    )
+    setSentRequests((current) => (current.includes(id) ? current : [...current, id]))
   }
 
   const resetFilters = () => {
@@ -237,39 +232,36 @@ export function StudentCatalog() {
     setOnlyFreePlaces(false)
   }
 
-  const comparedMentors = mentors.filter((mentor) =>
-    compared.includes(mentor.id),
-  )
+  const comparedMentors = mentors.filter((mentor) => compared.includes(mentor.id))
 
   return (
     <div className={styles.catalog}>
       <div className={styles.layout}>
         <section className={styles.results}>
           <div className={styles.toolbar}>
-            <label className={styles.search}>
-              <Search size={19} />
-              <input
+            <div className={styles.searchWrapper}>
+              <Search size={19} className={styles.searchIcon} />
+              <Input
+                className={styles.searchInput}
+                placeholder="Навык, имя или компания"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Навык, имя или компания"
               />
-            </label>
+            </div>
 
-            <select
-              className={styles.sort}
+            <Select
+              className={styles.sortSelect}
               value={sort}
               onChange={(event) => setSort(event.target.value)}
-              aria-label="Сортировка"
-            >
-              <option value="match">По совпадению</option>
-              <option value="rating">По рейтингу</option>
-              <option value="price">По цене</option>
-            </select>
+              options={[
+                { value: 'match', label: 'По совпадению' },
+                { value: 'rating', label: 'По рейтингу' },
+                { value: 'price', label: 'По цене' },
+              ]}
+            />
           </div>
 
-          <p className={styles.resultCount}>
-            Найдено {filteredMentors.length} наставников
-          </p>
+          <p className={styles.resultCount}>Найдено {filteredMentors.length} наставников</p>
 
           {filteredMentors.length > 0 ? (
             <div className={styles.grid}>
@@ -289,18 +281,14 @@ export function StudentCatalog() {
                         </p>
                         <span className={styles.rating}>
                           <Star size={14} fill="currentColor" />
-                          <strong>
-                            {mentor.rating.toFixed(1).replace('.', ',')}
-                          </strong>
+                          <strong>{mentor.rating.toFixed(1).replace('.', ',')}</strong>
                           <span>· {mentor.reviews} отзывов</span>
                         </span>
                       </div>
                     </div>
 
                     <div className={styles.tags}>
-                      <span className={styles.matchTag}>
-                        {mentor.match}% совпадение
-                      </span>
+                      <span className={styles.matchTag}>{mentor.match}% совпадение</span>
                       {mentor.skills.map((skill) => (
                         <span className={styles.skillTag} key={skill}>
                           {skill}
@@ -311,8 +299,7 @@ export function StudentCatalog() {
                     <div className={styles.cardMeta}>
                       <span>
                         <Clock size={15} />
-                        {String(mentor.hours).replace('.', ',')} ч/нед ·{' '}
-                        {mentor.schedule}
+                        {String(mentor.hours).replace('.', ',')} ч/нед · {mentor.schedule}
                       </span>
                       <strong>{formatPrice(mentor.price)}</strong>
                     </div>
@@ -396,55 +383,32 @@ export function StudentCatalog() {
           <div className={styles.filterGroup}>
             <h3>Стоимость занятия</h3>
             <div className={styles.chips}>
-              <Chip
-                active={priceFilter === 'any'}
-                onClick={() => setPriceFilter('any')}
-              >
+              <Chip active={priceFilter === 'any'} onClick={() => setPriceFilter('any')}>
                 Любая
               </Chip>
-              <Chip
-                active={priceFilter === 'free'}
-                onClick={() => setPriceFilter('free')}
-              >
+              <Chip active={priceFilter === 'free'} onClick={() => setPriceFilter('free')}>
                 Бесплатно
               </Chip>
-              <Chip
-                active={priceFilter === '1500'}
-                onClick={() => setPriceFilter('1500')}
-              >
+              <Chip active={priceFilter === '1500'} onClick={() => setPriceFilter('1500')}>
                 до 1 500 ₽
               </Chip>
-              <Chip
-                active={priceFilter === '3000'}
-                onClick={() => setPriceFilter('3000')}
-              >
+              <Chip active={priceFilter === '3000'} onClick={() => setPriceFilter('3000')}>
                 до 3 000 ₽
               </Chip>
             </div>
-            <p className={styles.filterHint}>
-              Оплата — напрямую наставнику, вне платформы
-            </p>
+            <p className={styles.filterHint}>Оплата — напрямую наставнику, вне платформы</p>
           </div>
 
           <div className={styles.filterGroup}>
             <h3>Время в неделю</h3>
             <div className={styles.chips}>
-              <Chip
-                active={hoursFilter === '1-2'}
-                onClick={() => setHoursFilter('1-2')}
-              >
+              <Chip active={hoursFilter === '1-2'} onClick={() => setHoursFilter('1-2')}>
                 1–2 ч
               </Chip>
-              <Chip
-                active={hoursFilter === '3-5'}
-                onClick={() => setHoursFilter('3-5')}
-              >
+              <Chip active={hoursFilter === '3-5'} onClick={() => setHoursFilter('3-5')}>
                 3–5 ч
               </Chip>
-              <Chip
-                active={hoursFilter === '5+'}
-                onClick={() => setHoursFilter('5+')}
-              >
+              <Chip active={hoursFilter === '5+'} onClick={() => setHoursFilter('5+')}>
                 5+ ч
               </Chip>
             </div>
@@ -476,22 +440,13 @@ export function StudentCatalog() {
           <div className={styles.filterGroup}>
             <h3>Рейтинг</h3>
             <div className={styles.chips}>
-              <Chip
-                active={ratingFilter === 'any'}
-                onClick={() => setRatingFilter('any')}
-              >
+              <Chip active={ratingFilter === 'any'} onClick={() => setRatingFilter('any')}>
                 Любой
               </Chip>
-              <Chip
-                active={ratingFilter === '4.5'}
-                onClick={() => setRatingFilter('4.5')}
-              >
+              <Chip active={ratingFilter === '4.5'} onClick={() => setRatingFilter('4.5')}>
                 от 4,5
               </Chip>
-              <Chip
-                active={ratingFilter === '4.8'}
-                onClick={() => setRatingFilter('4.8')}
-              >
+              <Chip active={ratingFilter === '4.8'} onClick={() => setRatingFilter('4.8')}>
                 от 4,8
               </Chip>
             </div>
@@ -552,10 +507,7 @@ export function StudentCatalog() {
         <section className={styles.comparison}>
           <div className={styles.comparisonHeading}>
             <h3>Сравнение наставников</h3>
-            <button
-              type="button"
-              onClick={() => setShowComparison(false)}
-            >
+            <button type="button" onClick={() => setShowComparison(false)}>
               <X size={18} />
             </button>
           </div>
@@ -566,9 +518,7 @@ export function StudentCatalog() {
                 <strong>{mentor.name}</strong>
                 <span>{mentor.position}</span>
                 <span>Совпадение: {mentor.match}%</span>
-                <span>
-                  Рейтинг: {mentor.rating.toFixed(1).replace('.', ',')}
-                </span>
+                <span>Рейтинг: {mentor.rating.toFixed(1).replace('.', ',')}</span>
                 <span>{formatPrice(mentor.price)}</span>
                 <span>{mentor.hours} ч/нед</span>
               </div>
