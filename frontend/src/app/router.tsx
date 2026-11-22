@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { AuthLayout } from '../layouts/AuthLayout'
 import { LoginPage } from '../pages/auth/LoginPage'
 import { RegisterPage } from '../pages/auth/RegisterPage'
@@ -8,14 +8,40 @@ import { OnboardingPage } from '../pages/onboarding/OnboardingPage'
 import { CabinetPage } from '../pages/CabinetPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { RequireAuth } from './RequireAuth'
+import { getRole, getToken, homeByRole } from '../lib/auth'
+
+function RequireGuest() {
+  const token = getToken()
+  const role = getRole()
+
+  if (token && role) {
+    return <Navigate to={homeByRole[role]} replace />
+  }
+
+  return <Outlet />
+}
+
+function RootRedirect() {
+  const token = getToken()
+  const role = getRole()
+
+  if (token && role) {
+    return <Navigate to={homeByRole[role]} replace />
+  }
+
+  return <Navigate to="/login" replace />
+}
 
 export const router = createBrowserRouter([
-  // Главная для гостей будет позже, пока — сразу на вход
-  { path: '/', element: <Navigate to="/login" replace /> },
+  { path: '/', element: <RootRedirect /> },
 
-  { path: '/login', element: <LoginPage /> },
-  { path: '/register', element: <RegisterPage /> },
-  { path: '/onboarding/:role/:step', element: <OnboardingPage /> },
+  {
+    element: <RequireGuest />,
+    children: [
+      { path: '/login', element: <LoginPage /> },
+      { path: '/register', element: <RegisterPage /> },
+    ],
+  },
 
   {
     element: <AuthLayout />,
@@ -23,6 +49,11 @@ export const router = createBrowserRouter([
       { path: '/verify-email', element: <VerifyEmailPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
     ],
+  },
+
+  {
+    element: <RequireAuth roles={['student', 'mentor']} />,
+    children: [{ path: '/onboarding/:role/:step', element: <OnboardingPage /> }],
   },
 
   {

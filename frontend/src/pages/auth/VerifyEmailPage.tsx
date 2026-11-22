@@ -5,33 +5,104 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { CodeInput } from '../../components/ui/CodeInput'
 import { useCountdown } from '../../hooks/useCountdown'
+import { verifyEmail, resendEmailCode, getMyAccount } from '../../api/auth'
+import { ApiError } from '../../api/client'
+import { saveSession, updateTokens, clearSession, homeByRole } from '../../lib/auth'
 import styles from './Auth.module.css'
 
 export function VerifyEmailPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const role = params.get('role') === 'mentor' ? 'mentor' : 'student'
-  const email = params.get('email') ?? 'вашу почту'
+
+  const email = params.get('email') ?? ''
 
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
+  const [serverError, setServerError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [isResending, setIsResending] = useState(false)
+
   const timer = useCountdown(60)
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (code.length < 6) {
+
+    setError('')
+    setServerError('')
+
+    if (!email) {
+      setServerError('Не указана почта. Вернитесь к регистрации.')
+      return
+    }
+
+    if (!/^\d{6}$/.test(code)) {
       setError('Введите все 6 цифр')
       return
     }
-    // TODO: POST /api/auth/verify-email — подключим с мок-сервером
-    navigate(`/onboarding/${role}/1`)
+
+    setIsLoading(true)
+
+    try {
+      const tokens = await verifyEmail(email, code)
+
+      // Сохраняем токены, чтобы запрос профиля прошёл с авторизацией.
+      updateTokens(tokens.access_token, tokens.refresh_token)
+
+      // Получаем настоящую роль пользователя с сервера.
+      const account = await getMyAccount()
+
+      // Сохраняем сессию с ролью, полученной от API.
+      saveSession(tokens.access_token, tokens.refresh_token, account.role)
+
+      // После регистрации ученик и наставник переходят к своей анкете.
+      if (account.role === 'student' || account.role === 'mentor') {
+        navigate(`/onboarding/${account.role}/1`, { replace: true })
+      } else {
+        navigate(homeByRole[account.role], { replace: true })
+      }
+    } catch (err) {
+      clearSession()
+
+      if (err instanceof ApiError) {
+        if (err.status === 400) {
+          setError('Неверный или просроченный код. Проверьте его и попробуйте ещё раз.')
+        } else if (err.status === 429) {
+          setServerError('Слишком много попыток. Попробуйте позже.')
+        } else {
+          setServerError(err.message)
+        }
+      } else {
+        setServerError('Не удалось связаться с сервером. Попробуйте позже.')
+      }
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  function resend() {
-    // TODO: POST /api/auth/verify-email/resend
-    setCode('')
+  async function resend() {
+    if (!email || isResending || isLoading || timer.left > 0) return
+
+    setIsResending(true)
     setError('')
-    timer.restart()
+    setServerError('')
+
+    try {
+      await resendEmailCode(email)
+      setCode('')
+      timer.restart()
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.status === 429) {
+          setServerError('Повторно запросить код пока нельзя. Попробуйте позже.')
+        } else {
+          setServerError(err.message)
+        }
+      } else {
+        setServerError('Не удалось отправить код. Попробуйте позже.')
+      }
+    } finally {
+      setIsResending(false)
+    }
   }
 
   return (
@@ -39,14 +110,18 @@ export function VerifyEmailPage() {
       <div className={styles.head}>
         <h1 className="t-h1">Подтвердите почту</h1>
         <p className="t-body text-secondary">
-          Отправили код из 6 цифр на <b>{email}</b>. <Link to="/register">Изменить почту</Link>
+          Отправили код из 6 цифр на <b>{email || 'вашу почту'}</b>.{' '}
+          <Link to="/register">Изменить почту</Link>
         </p>
       </div>
 
       <form className={styles.form} onSubmit={handleSubmit} noValidate>
         <CodeInput value={code} onChange={setCode} error={error} />
-        <Button type="submit" size="lg" fullWidth>
-          Подтвердить и перейти к анкете
+
+        {serverError ? <p className={styles.formError}>{serverError}</p> : null}
+
+        <Button type="submit" size="lg" fullWidth disabled={isLoading || isResending}>
+          {isLoading ? 'Проверяем код...' : 'Подтвердить и перейти к анкете'}
         </Button>
       </form>
 
@@ -55,8 +130,13 @@ export function VerifyEmailPage() {
         {timer.left > 0 ? (
           <>Запросить новый код можно через {timer.label}</>
         ) : (
-          <button type="button" className={styles.linkButton} onClick={resend}>
-            Запросить новый код
+          <button
+            type="button"
+            className={styles.linkButton}
+            onClick={resend}
+            disabled={isResending || isLoading}
+          >
+            {isResending ? 'Отправляем...' : 'Запросить новый код'}
           </button>
         )}
       </p>

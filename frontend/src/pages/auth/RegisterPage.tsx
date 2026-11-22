@@ -7,6 +7,8 @@ import { Button } from '../../components/ui/Button'
 import { AuthSplit } from '../../layouts/AuthSplit'
 import { Input } from '../../components/ui/Input'
 import { isEmail, PASSWORD_MIN } from '../../lib/validation'
+import { register } from '../../api/auth'
+import { ApiError } from '../../api/client'
 import type { PublicRole } from '../../types'
 import styles from './Auth.module.css'
 
@@ -36,6 +38,7 @@ const PROMO: Record<PublicRole, { title: string; text: string }> = {
 
 export function RegisterPage() {
   const navigate = useNavigate()
+
   const [role, setRole] = useState<PublicRole>('student')
   const [lastName, setLastName] = useState('')
   const [firstName, setFirstName] = useState('')
@@ -45,25 +48,62 @@ export function RegisterPage() {
   const [repeat, setRepeat] = useState('')
   const [agree, setAgree] = useState(false)
   const [errors, setErrors] = useState<Errors>({})
+  const [serverError, setServerError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   function validate(): Errors {
     const next: Errors = {}
+
     if (!lastName.trim()) next.lastName = 'Укажите фамилию'
     if (!firstName.trim()) next.firstName = 'Укажите имя'
     if (!isEmail(email)) next.email = 'Введите почту в формате name@mail.ru'
-    if (password.length < PASSWORD_MIN) next.password = `Минимум ${PASSWORD_MIN} символов`
+    if (password.length < PASSWORD_MIN) {
+      next.password = `Минимум ${PASSWORD_MIN} символов`
+    }
     if (repeat !== password) next.repeat = 'Пароли не совпадают'
     if (!agree) next.agree = 'Нужно согласие с условиями'
+
     return next
   }
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
     const next = validate()
     setErrors(next)
+    setServerError('')
+
     if (Object.keys(next).length > 0) return
-    // TODO: POST /api/auth/register — подключим с мок-сервером
-    navigate(`/verify-email?role=${role}&email=${encodeURIComponent(email.trim())}`)
+
+    setIsLoading(true)
+
+    try {
+      await register({
+        role,
+        email: email.trim().toLowerCase(),
+        password,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        ...(middleName.trim() ? { middle_name: middleName.trim() } : {}),
+        terms_accepted: true,
+      })
+
+      navigate(`/verify-email?role=${role}&email=${encodeURIComponent(email.trim().toLowerCase())}`)
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.status === 409) {
+          setServerError('Аккаунт с такой почтой уже существует')
+        } else if (error.status === 429) {
+          setServerError('Слишком много запросов. Попробуйте немного позже')
+        } else {
+          setServerError(error.message)
+        }
+      } else {
+        setServerError('Не удалось связаться с сервером. Попробуйте позже')
+      }
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -82,6 +122,7 @@ export function RegisterPage() {
             type="button"
             className={clsx(styles.role, role === value ? styles.roleActive : '')}
             onClick={() => setRole(value)}
+            disabled={isLoading}
           >
             <span className={styles.roleIcon}>
               {role === value ? <Check size={20} /> : <Icon size={20} strokeWidth={1.75} />}
@@ -116,6 +157,7 @@ export function RegisterPage() {
             onChange={(e) => setMiddleName(e.target.value)}
           />
         </div>
+
         <Input
           label="Электронная почта"
           type="email"
@@ -125,6 +167,7 @@ export function RegisterPage() {
           onChange={(e) => setEmail(e.target.value)}
           error={errors.email}
         />
+
         <div className={styles.grid2}>
           <Input
             label="Пароль"
@@ -146,16 +189,24 @@ export function RegisterPage() {
         </div>
 
         <label className={styles.check}>
-          <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={agree}
+            onChange={(e) => setAgree(e.target.checked)}
+            disabled={isLoading}
+          />
           <span>
             Согласен(на) с условиями и обработкой персональных данных. Наставники видят только имя и
             интересы ученика.
           </span>
         </label>
+
         {errors.agree ? <p className={styles.formError}>{errors.agree}</p> : null}
 
-        <Button type="submit" size="lg" fullWidth>
-          Создать аккаунт
+        {serverError ? <p className={styles.formError}>{serverError}</p> : null}
+
+        <Button type="submit" size="lg" fullWidth disabled={isLoading}>
+          {isLoading ? 'Отправляем...' : 'Создать аккаунт'}
         </Button>
       </form>
     </AuthSplit>
