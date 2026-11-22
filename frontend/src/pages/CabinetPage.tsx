@@ -10,7 +10,7 @@ export function CabinetPage() {
 
   const isStudentDemo =
     import.meta.env.DEV &&
-    location.pathname === '/student' &&
+    location.pathname.startsWith('/student') &&
     new URLSearchParams(location.search).get('demo') === '1'
 
   if (role === 'student' || isStudentDemo) {

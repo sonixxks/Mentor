@@ -58,7 +58,10 @@ export const router = createBrowserRouter([
 
   {
     element: <RequireAuth roles={['student']} />,
-    children: [{ path: '/student', element: <CabinetPage /> }],
+    children: [
+      { path: '/student', element: <CabinetPage /> },
+      { path: '/student/catalog', element: <CabinetPage /> },
+    ],
   },
   {
     element: <RequireAuth roles={['mentor']} />,

@@ -1,4 +1,3 @@
-
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { getRole, getToken, homeByRole } from '../lib/auth'
 import type { Role } from '../types'
@@ -16,7 +15,7 @@ export function RequireAuth({ roles }: RequireAuthProps) {
   // Работает только в режиме разработки и только с ?demo=1.
   const isStudentDemo =
     import.meta.env.DEV &&
-    location.pathname === '/student' &&
+    location.pathname.startsWith('/student') &&
     new URLSearchParams(location.search).get('demo') === '1'
 
   if (isStudentDemo && roles.includes('student')) {

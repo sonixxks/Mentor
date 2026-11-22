@@ -21,6 +21,8 @@ import { Button } from '../../components/ui/Button/Button'
 import { Card } from '../../components/ui/Card/Card'
 import { useSession } from '../../hooks/useSession'
 import styles from './StudentCabinet.module.css'
+import { Link } from 'react-router-dom'
+import { StudentCatalog } from './StudentCatalog'
 
 type Mentor = {
   id: number
@@ -114,26 +116,41 @@ export function StudentCabinet() {
         </div>
 
         <nav className={styles.navigation}>
-          <div className={`${styles.navItem} ${styles.navActive}`}>
+          <Link
+            to="/student?demo=1"
+            className={`${styles.navItem} ${
+              location.pathname === '/student' ? styles.navActive : ''
+            }`}
+          >
             <Sparkles size={19} />
             <span>Подбор</span>
-          </div>
-          <div className={styles.navItem}>
+          </Link>
+
+          <Link
+            to="/student/catalog?demo=1"
+            className={`${styles.navItem} ${
+              location.pathname === '/student/catalog' ? styles.navActive : ''
+            }`}
+          >
             <Search size={19} />
             <span>Каталог</span>
-          </div>
+          </Link>
+
           <div className={styles.navItem}>
             <BriefcaseBusiness size={19} />
             <span>Мои заявки</span>
           </div>
+
           <div className={styles.navItem}>
             <LayoutGrid size={19} />
             <span>Пространство</span>
           </div>
+
           <div className={styles.navItem}>
             <CalendarDays size={19} />
             <span>Календарь</span>
           </div>
+
           <div className={styles.navItem}>
             <MessageCircle size={19} />
             <span>Чат</span>
@@ -157,7 +174,7 @@ export function StudentCabinet() {
 
       <main className={styles.main}>
         <header className={styles.topbar}>
-          <h1>Подбор</h1>
+          <h1>{location.pathname === '/student/catalog' ? 'Каталог' : 'Подбор'}</h1>
           <div className={styles.userInfo}>
             <button type="button" className={styles.iconButton} aria-label="Уведомления">
               <Bell size={20} />
@@ -166,7 +183,11 @@ export function StudentCabinet() {
           </div>
         </header>
 
-        {isEmptyDemo ? (
+        {location.pathname === '/student/catalog' ? (
+          <div className={styles.content}>
+            <StudentCatalog />
+          </div>
+        ) : isEmptyDemo ? (
           <div className={styles.content}>
             <section className={styles.emptyState}>
               <div className={styles.emptyIllustration}>
