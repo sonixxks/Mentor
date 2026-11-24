@@ -1,560 +1,287 @@
-import { useMemo, useState } from 'react'
-import { Check, Clock, Search, Star, X } from 'lucide-react'
-import { Avatar } from '../../components/ui/Avatar'
-import styles from './StudentCatalog.module.css'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { clsx } from 'clsx'
+import { Search, SlidersHorizontal } from 'lucide-react'
+import { useState } from 'react'
+import { getMentors } from '../../api/mentors'
+import type { MentorFilters, MentorSort } from '../../api/mentors'
+import { MentorCard } from '../../components/MentorCard'
+import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Slider } from '../../components/ui/Slider'
-import { StudentMentorProfile } from './StudentMentorProfile'
+import { Tag } from '../../components/ui/Tag'
+import { useDebounce } from '../../hooks/useDebounce'
+import { useSkills } from '../../hooks/useSkills'
+import { plural } from '../../lib/plural'
+import styles from './StudentCatalog.module.css'
 
-type Mentor = {
-  id: number
-  name: string
-  position: string
-  experience: string
-  rating: number
-  reviews: number
-  match: number
-  skills: string[]
-  hours: number
-  schedule: string
-  price: number
-  freePlaces: boolean
-}
-
-const mentors: Mentor[] = [
-  {
-    id: 1,
-    name: 'Данил Королёв',
-    position: 'ML-инженер',
-    experience: '5 лет',
-    rating: 4.9,
-    reviews: 38,
-    match: 94,
-    skills: ['Python', 'ML'],
-    hours: 1.5,
-    schedule: 'Вт, Чт 19–21',
-    price: 1000,
-    freePlaces: true,
-  },
-  {
-    id: 2,
-    name: 'Мария Петрова',
-    position: 'Data Analyst',
-    experience: '6 лет',
-    rating: 4.8,
-    reviews: 24,
-    match: 91,
-    skills: ['SQL', 'Статистика'],
-    hours: 2,
-    schedule: 'Сб 10–14',
-    price: 1200,
-    freePlaces: true,
-  },
-  {
-    id: 3,
-    name: 'Виктор Соколов',
-    position: 'CV-инженер',
-    experience: '8 лет',
-    rating: 4.7,
-    reviews: 17,
-    match: 87,
-    skills: ['Computer Vision'],
-    hours: 1,
-    schedule: 'Ср 20–21',
-    price: 1500,
-    freePlaces: false,
-  },
-  {
-    id: 4,
-    name: 'Ольга Лебедева',
-    position: 'Тимлид DS',
-    experience: '10 лет',
-    rating: 5.0,
-    reviews: 41,
-    match: 84,
-    skills: ['MLOps', 'Карьера'],
-    hours: 2,
-    schedule: 'Пн, Пт 8–9',
-    price: 0,
-    freePlaces: true,
-  },
-  {
-    id: 5,
-    name: 'Игорь Новиков',
-    position: 'Backend + ML',
-    experience: '4 года',
-    rating: 4.6,
-    reviews: 9,
-    match: 79,
-    skills: ['Python', 'API'],
-    hours: 3,
-    schedule: 'Вт–Чт 18–19',
-    price: 900,
-    freePlaces: true,
-  },
-  {
-    id: 6,
-    name: 'Анна Егорова',
-    position: 'Product Analyst',
-    experience: '5 лет',
-    rating: 4.8,
-    reviews: 22,
-    match: 76,
-    skills: ['A/B-тесты'],
-    hours: 1.5,
-    schedule: 'Пн 19–20:30',
-    price: 0,
-    freePlaces: true,
-  },
+const SORT_OPTIONS: { value: MentorSort; label: string }[] = [
+  { value: 'match', label: 'По совместимости' },
+  { value: 'rating', label: 'По рейтингу' },
+  { value: 'price_asc', label: 'Сначала дешевле' },
+  { value: 'price_desc', label: 'Сначала дороже' },
+  { value: 'experience', label: 'По опыту' },
 ]
 
-const formatPrice = (price: number) =>
-  price === 0 ? 'Бесплатно' : `${price.toLocaleString('ru-RU')} ₽/занятие`
+const PAGE_SIZE = 9
+const SKILLS_VISIBLE = 6
 
-type ChipProps = {
-  active: boolean
-  children: React.ReactNode
-  onClick: () => void
+const DEFAULTS = {
+  query: '',
+  sort: 'match' as MentorSort,
+  skills: [] as string[],
+  priceMin: '',
+  priceMax: '',
+  hoursMin: '',
+  hoursMax: '',
+  minMatch: 0,
+  minRating: 0,
+  onlyFree: true,
 }
 
-function Chip({ active, children, onClick }: ChipProps) {
-  return (
-    <button
-      type="button"
-      className={`${styles.chip} ${active ? styles.chipActive : ''}`}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  )
-}
+type FiltersState = typeof DEFAULTS
+
+/** Пустое поле → undefined (фильтр не отправляем), иначе число */
+const toNumber = (value: string) => (value.trim() === '' ? undefined : Number(value))
 
 export function StudentCatalog() {
-  const [query, setQuery] = useState('')
-  const [sort, setSort] = useState('match')
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([])
-  const [priceMin, setPriceMin] = useState(0)
-  const [priceMax, setPriceMax] = useState(10000)
-  const [hoursLimit, setHoursLimit] = useState(1)
-  const [minMatch, setMinMatch] = useState(70)
-  const [ratingMin, setRatingMin] = useState(1)
-  const [onlyFreePlaces, setOnlyFreePlaces] = useState(true)
-  const [compared, setCompared] = useState<number[]>([])
-  const [sentRequests, setSentRequests] = useState<number[]>([])
-  const [showComparison, setShowComparison] = useState(false)
-  const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null)
+  const [state, setState] = useState<FiltersState>(DEFAULTS)
+  const [limit, setLimit] = useState(PAGE_SIZE)
+  const [showAllSkills, setShowAllSkills] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
-  const filteredMentors = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
+  const query = useDebounce(state.query)
+  const skillsQuery = useSkills()
 
-    const result = mentors.filter((mentor) => {
-      const matchesQuery =
-        !normalizedQuery ||
-        mentor.name.toLowerCase().includes(normalizedQuery) ||
-        mentor.position.toLowerCase().includes(normalizedQuery) ||
-        mentor.skills.some((skill) => skill.toLowerCase().includes(normalizedQuery))
-
-      const matchesSkills =
-        selectedSkills.length === 0 ||
-        selectedSkills.every((skill) => mentor.skills.includes(skill))
-
-      const matchesPrice = mentor.price >= priceMin && mentor.price <= priceMax
-
-      // time_limit наставника — максимум часов, которые он готов уделять ученику.
-      // Значение 10 в анкете означает «10 и более».
-      const matchesHours = mentor.hours >= hoursLimit
-
-      const matchesRating = mentor.rating >= ratingMin
-
-      return (
-        matchesQuery &&
-        matchesSkills &&
-        matchesPrice &&
-        matchesHours &&
-        mentor.match >= minMatch &&
-        matchesRating &&
-        (!onlyFreePlaces || mentor.freePlaces)
-      )
-    })
-
-    if (sort === 'match') result.sort((a, b) => b.match - a.match)
-    if (sort === 'rating') result.sort((a, b) => b.rating - a.rating)
-    if (sort === 'price') result.sort((a, b) => a.price - b.price)
-
-    return result
-  }, [
-    query,
-    sort,
-    selectedSkills,
-    priceMin,
-    priceMax,
-    hoursLimit,
-    minMatch,
-    ratingMin,
-    onlyFreePlaces,
-  ])
-
-  const toggleSkill = (skill: string) => {
-    setSelectedSkills((current) =>
-      current.includes(skill) ? current.filter((item) => item !== skill) : [...current, skill],
-    )
+  function update(patch: Partial<FiltersState>) {
+    setState((prev) => ({ ...prev, ...patch }))
+    setLimit(PAGE_SIZE)
   }
 
-  const toggleCompare = (id: number) => {
-    setCompared((current) => {
-      if (current.includes(id)) {
-        setShowComparison(false)
-        return current.filter((item) => item !== id)
-      }
-
-      if (current.length >= 3) return current
-      return [...current, id]
+  function toggleSkill(skill: string) {
+    update({
+      skills: state.skills.includes(skill)
+        ? state.skills.filter((item) => item !== skill)
+        : [...state.skills, skill],
     })
   }
 
-  const sendRequest = (id: number) => {
-    setSentRequests((current) => (current.includes(id) ? current : [...current, id]))
+  const filters: MentorFilters = {
+    q: query.trim() || undefined,
+    skills: state.skills,
+    sort: state.sort,
+    price_min: toNumber(state.priceMin),
+    price_max: toNumber(state.priceMax),
+    hours_min: toNumber(state.hoursMin),
+    hours_max: toNumber(state.hoursMax),
+    min_match: state.minMatch || undefined,
+    min_rating: state.minRating || undefined,
+    has_free_slots: state.onlyFree,
+    limit,
   }
 
-  const resetFilters = () => {
-    setQuery('')
-    setSort('match')
-    setSelectedSkills([])
-    setPriceMin(0)
-    setPriceMax(10000)
-    setHoursLimit(1)
-    setMinMatch(70)
-    setRatingMin(1)
-    setOnlyFreePlaces(false)
-  }
+  const mentors = useQuery({
+    queryKey: ['mentors', filters],
+    queryFn: () => getMentors(filters),
+    placeholderData: keepPreviousData,
+  })
 
-  const comparedMentors = mentors.filter((mentor) => compared.includes(mentor.id))
+  const total = mentors.data?.total ?? 0
+  const items = mentors.data?.items ?? []
 
-  if (selectedMentor) {
-    return (
-      <StudentMentorProfile
-        mentor={selectedMentor}
-        isCompared={compared.includes(selectedMentor.id)}
-        isSent={sentRequests.includes(selectedMentor.id)}
-        onBack={() => setSelectedMentor(null)}
-        onCompare={() => toggleCompare(selectedMentor.id)}
-        onRequest={() => sendRequest(selectedMentor.id)}
-      />
-    )
-  }
+  const allSkills = skillsQuery.data ?? []
+  const visibleSkills = showAllSkills ? allSkills : allSkills.slice(0, SKILLS_VISIBLE)
+  // Выбранные навыки видны всегда, даже если список свёрнут
+  const shownSkills = [...new Set([...state.skills, ...visibleSkills])]
 
   return (
-    <div className={styles.catalog}>
-      <div className={styles.layout}>
-        <section className={styles.results}>
-          <div className={styles.toolbar}>
-            <div className={styles.searchWrapper}>
-              <Search size={19} className={styles.searchIcon} />
-              <Input
-                className={styles.searchInput}
-                placeholder="Навык, имя или компания"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </div>
-
+    <div className={styles.layout}>
+      <section className={styles.results}>
+        <div className={styles.toolbar}>
+          <div className={styles.search}>
+            <Search size={20} className={styles.searchIcon} />
+            <Input
+              placeholder="Навык, имя или компания"
+              value={state.query}
+              onChange={(e) => update({ query: e.target.value })}
+            />
+          </div>
+          <div className={styles.sort}>
             <Select
-              className={styles.sortSelect}
-              value={sort}
-              onChange={(event) => setSort(event.target.value)}
-              options={[
-                { value: 'match', label: 'По совпадению' },
-                { value: 'rating', label: 'По рейтингу' },
-                { value: 'price', label: 'По цене' },
-              ]}
+              options={SORT_OPTIONS}
+              value={state.sort}
+              onChange={(e) => update({ sort: e.target.value as MentorSort })}
             />
           </div>
-
-          <p className={styles.resultCount}>Найдено {filteredMentors.length} наставников</p>
-
-          {filteredMentors.length > 0 ? (
-            <div className={styles.grid}>
-              {filteredMentors.map((mentor) => {
-                const isCompared = compared.includes(mentor.id)
-                const isSent = sentRequests.includes(mentor.id)
-
-                return (
-                  <article className={styles.mentorCard} key={mentor.id}>
-                    <div className={styles.cardHeader}>
-                      <button
-                        type="button"
-                        className={styles.profileLink}
-                        onClick={() => setSelectedMentor(mentor)}
-                        aria-label={`Открыть профиль ${mentor.name}`}
-                      >
-                        <Avatar name={mentor.name} size="l" />
-                      </button>
-
-                      <div className={styles.mentorInfo}>
-                        <h3>
-                          <h3>
-                            <button
-                              type="button"
-                              className={styles.profileName}
-                              onClick={() => setSelectedMentor(mentor)}
-                            >
-                              {mentor.name}
-                            </button>
-                          </h3>
-                        </h3>
-                        <p>
-                          {mentor.position} · {mentor.experience}
-                        </p>
-                        <span className={styles.rating}>
-                          <Star size={14} fill="currentColor" />
-                          <strong>{mentor.rating.toFixed(1).replace('.', ',')}</strong>
-                          <span>· {mentor.reviews} отзывов</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className={styles.tags}>
-                      <span className={styles.matchTag}>{mentor.match}% совпадение</span>
-                      {mentor.skills.map((skill) => (
-                        <span className={styles.skillTag} key={skill}>
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className={styles.cardMeta}>
-                      <span>
-                        <Clock size={15} />
-                        {String(mentor.hours).replace('.', ',')} ч/нед · {mentor.schedule}
-                      </span>
-                      <strong>{formatPrice(mentor.price)}</strong>
-                    </div>
-
-                    <div className={styles.cardActions}>
-                      <button
-                        type="button"
-                        className={styles.requestButton}
-                        onClick={() => sendRequest(mentor.id)}
-                        disabled={isSent}
-                      >
-                        {isSent ? (
-                          <>
-                            <Check size={15} /> Заявка отправлена
-                          </>
-                        ) : (
-                          'Отправить заявку'
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        className={`${styles.compareButton} ${
-                          isCompared ? styles.compareButtonActive : ''
-                        }`}
-                        onClick={() => toggleCompare(mentor.id)}
-                        disabled={!isCompared && compared.length >= 3}
-                      >
-                        {isCompared ? (
-                          <>
-                            <Check size={15} /> В сравнении
-                          </>
-                        ) : (
-                          'Сравнить'
-                        )}
-                      </button>
-                    </div>
-                  </article>
-                )
-              })}
-            </div>
-          ) : (
-            <div className={styles.empty}>
-              <Search size={30} />
-              <h3>Наставники не найдены</h3>
-              <p>Попробуй изменить параметры поиска.</p>
-              <button type="button" onClick={resetFilters}>
-                Сбросить фильтры
-              </button>
-            </div>
-          )}
-        </section>
-
-        <aside className={styles.filters}>
-          <div className={styles.filterHeading}>
-            <h2>Фильтры</h2>
-            <button type="button" onClick={resetFilters}>
-              Сбросить
-            </button>
-          </div>
-
-          <div className={styles.filterGroup}>
-            <h3>Навыки</h3>
-            <div className={styles.chips}>
-              {['Data Science', 'Python', 'ML', 'SQL'].map((skill) => (
-                <Chip
-                  key={skill}
-                  active={selectedSkills.includes(skill)}
-                  onClick={() => toggleSkill(skill)}
-                >
-                  {skill}
-                  {selectedSkills.includes(skill) && ' ×'}
-                </Chip>
-              ))}
-              <Chip active={false} onClick={() => setSelectedSkills([])}>
-                + ещё
-              </Chip>
-            </div>
-          </div>
-
-          <div className={styles.filterGroup}>
-            <h3>Стоимость занятия</h3>
-            <div className={styles.priceInputs}>
-              <Input
-                className={styles.priceInput}
-                label="От, ₽"
-                type="number"
-                min={0}
-                max={10000}
-                value={String(priceMin)}
-                onChange={(event) => {
-                  const value = Math.min(10000, Math.max(0, Number(event.target.value) || 0))
-                  setPriceMin(Math.min(value, priceMax))
-                }}
-              />
-              <Input
-                className={styles.priceInput}
-                label="До, ₽"
-                type="number"
-                min={0}
-                max={10000}
-                value={String(priceMax)}
-                onChange={(event) => {
-                  const value = Math.min(10000, Math.max(0, Number(event.target.value) || 0))
-                  setPriceMax(Math.max(value, priceMin))
-                }}
-              />
-            </div>
-            <p className={styles.filterHint}>Оплата — напрямую наставнику, вне платформы</p>
-          </div>
-
-          <div className={styles.filterGroup}>
-            <Slider
-              label="Время в неделю"
-              value={hoursLimit}
-              min={1}
-              max={10}
-              step={1}
-              onChange={setHoursLimit}
-              format={(value) => (value === 10 ? '10+ ч' : `${value} ч`)}
-              marks={['1 ч', '5 ч', '10+ ч']}
-            />
-          </div>
-
-          <div className={styles.filterGroup}>
-            <Slider
-              label="Минимальное совпадение"
-              value={minMatch}
-              min={0}
-              max={100}
-              step={5}
-              onChange={setMinMatch}
-              format={(value) => `от ${value}%`}
-              marks={['0%', '50%', '100%']}
-            />
-          </div>
-
-          <div className={styles.filterGroup}>
-            <Slider
-              label="Рейтинг"
-              value={ratingMin}
-              min={1}
-              max={5}
-              step={0.1}
-              onChange={setRatingMin}
-              format={(value) => `от ${value.toFixed(1).replace('.', ',')} ★`}
-              marks={['1,0', '3,0', '5,0']}
-            />
-          </div>
-
-          <label className={styles.switchRow}>
-            <span>Есть свободные места</span>
-            <input
-              type="checkbox"
-              checked={onlyFreePlaces}
-              onChange={(event) => setOnlyFreePlaces(event.target.checked)}
-            />
-            <span className={styles.switch} />
-          </label>
-        </aside>
-      </div>
-
-      {compared.length > 0 && (
-        <div className={styles.compareBar}>
-          <div className={styles.compareAvatars}>
-            {comparedMentors.map((mentor) => (
-              <span key={mentor.id} title={mentor.name}>
-                {mentor.name
-                  .split(' ')
-                  .map((part) => part[0])
-                  .join('')
-                  .slice(0, 2)}
-              </span>
-            ))}
-          </div>
-
-          <strong>Выбрано {compared.length} из 3</strong>
-
-          <button
-            type="button"
-            className={styles.compareMainButton}
-            disabled={compared.length < 2}
-            onClick={() => setShowComparison((current) => !current)}
+          <Button
+            variant="secondary"
+            size="md"
+            className={styles.filtersToggle}
+            onClick={() => setFiltersOpen((open) => !open)}
           >
-            {showComparison ? 'Скрыть сравнение' : 'Сравнить'}
-          </button>
+            <SlidersHorizontal size={16} />
+            Фильтры
+          </Button>
+        </div>
 
-          <button
-            type="button"
-            className={styles.clearCompare}
-            onClick={() => {
-              setCompared([])
-              setShowComparison(false)
-            }}
-            aria-label="Очистить сравнение"
-          >
-            <X size={17} />
+        {mentors.isPending ? <p className={styles.count}>Загружаем наставников…</p> : null}
+
+        {mentors.isError ? (
+          <div className={styles.state}>
+            <p>Не удалось загрузить наставников.</p>
+            <Button variant="secondary" size="md" onClick={() => mentors.refetch()}>
+              Попробовать ещё раз
+            </Button>
+          </div>
+        ) : null}
+
+        {mentors.isSuccess ? (
+          <>
+            <p className={styles.count}>
+              Найдено {plural(total, ['наставник', 'наставника', 'наставников'])}
+            </p>
+
+            {items.length > 0 ? (
+              <div className={clsx(styles.grid, mentors.isPlaceholderData ? styles.fetching : '')}>
+                {items.map((mentor) => (
+                  <MentorCard
+                    key={mentor.id}
+                    mentor={mentor}
+                    onRequest={() => {
+                      // TODO: шаг 5 — открыть окно заявки
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className={styles.state}>
+                <p>По этим фильтрам наставников нет. Попробуй смягчить условия.</p>
+                <Button variant="secondary" size="md" onClick={() => update(DEFAULTS)}>
+                  Сбросить фильтры
+                </Button>
+              </div>
+            )}
+
+            {items.length < total ? (
+              <Button
+                variant="secondary"
+                size="md"
+                className={styles.more}
+                onClick={() => setLimit((value) => value + PAGE_SIZE)}
+              >
+                Показать ещё
+              </Button>
+            ) : null}
+          </>
+        ) : null}
+      </section>
+
+      <aside className={clsx(styles.filters, filtersOpen ? styles.filtersOpen : '')}>
+        <div className={styles.filtersHead}>
+          <h2 className={styles.filtersTitle}>Фильтры</h2>
+          <button type="button" className={styles.reset} onClick={() => update(DEFAULTS)}>
+            Сбросить
           </button>
         </div>
-      )}
 
-      {showComparison && comparedMentors.length >= 2 && (
-        <section className={styles.comparison}>
-          <div className={styles.comparisonHeading}>
-            <h3>Сравнение наставников</h3>
-            <button type="button" onClick={() => setShowComparison(false)}>
-              <X size={18} />
-            </button>
-          </div>
-
-          <div className={styles.comparisonGrid}>
-            {comparedMentors.map((mentor) => (
-              <div key={mentor.id}>
-                <strong>{mentor.name}</strong>
-                <span>{mentor.position}</span>
-                <span>Совпадение: {mentor.match}%</span>
-                <span>Рейтинг: {mentor.rating.toFixed(1).replace('.', ',')}</span>
-                <span>{formatPrice(mentor.price)}</span>
-                <span>{mentor.hours} ч/нед</span>
-              </div>
+        <div className={styles.group}>
+          <span className={styles.groupTitle}>Навыки</span>
+          <div className={styles.tags}>
+            {shownSkills.map((skill) => (
+              <Tag
+                key={skill}
+                selected={state.skills.includes(skill)}
+                onClick={() => toggleSkill(skill)}
+              >
+                {skill}
+              </Tag>
             ))}
+            {allSkills.length > SKILLS_VISIBLE ? (
+              <button
+                type="button"
+                className={styles.moreSkills}
+                onClick={() => setShowAllSkills((value) => !value)}
+              >
+                {showAllSkills ? 'Свернуть' : '+ ещё'}
+              </button>
+            ) : null}
           </div>
-        </section>
-      )}
+        </div>
 
-      <p className={styles.demoNote}>
-        Демонстрационные данные. Заявки и сравнение пока работают локально.
-      </p>
+        <div className={styles.group}>
+          <span className={styles.groupTitle}>Стоимость занятия, ₽</span>
+          <div className={styles.pair}>
+            <Input
+              type="number"
+              min={0}
+              placeholder="от"
+              value={state.priceMin}
+              onChange={(e) => update({ priceMin: e.target.value })}
+            />
+            <Input
+              type="number"
+              min={0}
+              placeholder="до"
+              value={state.priceMax}
+              onChange={(e) => update({ priceMax: e.target.value })}
+            />
+          </div>
+          <p className={styles.hint}>0 — бесплатно. Оплата напрямую наставнику, вне платформы</p>
+        </div>
+
+        <div className={styles.group}>
+          <span className={styles.groupTitle}>Время в неделю, ч</span>
+          <div className={styles.pair}>
+            <Input
+              type="number"
+              min={1}
+              max={10}
+              placeholder="от"
+              value={state.hoursMin}
+              onChange={(e) => update({ hoursMin: e.target.value })}
+            />
+            <Input
+              type="number"
+              min={1}
+              max={10}
+              placeholder="до"
+              value={state.hoursMax}
+              onChange={(e) => update({ hoursMax: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <Slider
+          label="Минимальное совпадение"
+          min={0}
+          max={100}
+          step={5}
+          value={state.minMatch}
+          onChange={(minMatch) => update({ minMatch })}
+          format={(value) => (value === 0 ? 'любое' : `от ${value}%`)}
+        />
+
+        <Slider
+          label="Рейтинг"
+          min={0}
+          max={5}
+          step={0.5}
+          value={state.minRating}
+          onChange={(minRating) => update({ minRating })}
+          format={(value) => (value === 0 ? 'любой' : `от ${String(value).replace('.', ',')}`)}
+        />
+
+        <label className={styles.switchRow}>
+          <span>Есть свободные места</span>
+          <input
+            type="checkbox"
+            className={styles.switchInput}
+            checked={state.onlyFree}
+            onChange={(e) => update({ onlyFree: e.target.checked })}
+          />
+          <span className={styles.switch} aria-hidden="true" />
+        </label>
+      </aside>
     </div>
   )
 }
