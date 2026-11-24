@@ -10,9 +10,16 @@ import (
 
 	"net/http"
 
+	"github.com/sonixxks/Mentor/backend/internal/auth"
+	"github.com/sonixxks/Mentor/backend/internal/catalog"
+	"github.com/sonixxks/Mentor/backend/internal/chat"
 	"github.com/sonixxks/Mentor/backend/internal/config"
+	"github.com/sonixxks/Mentor/backend/internal/curator"
+	"github.com/sonixxks/Mentor/backend/internal/faq"
 	"github.com/sonixxks/Mentor/backend/internal/platform/postgres"
+	"github.com/sonixxks/Mentor/backend/internal/requests"
 	"github.com/sonixxks/Mentor/backend/internal/transport/rest"
+	"github.com/sonixxks/Mentor/backend/internal/transport/rest/middleware"
 	"github.com/sonixxks/Mentor/backend/internal/transport/rest/statusroutes"
 )
 
@@ -40,11 +47,34 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 	//validator
 	//validate := validation.NewValidator()
 
+	//auth
+	tokens, err := auth.NewTokenManager(cfg.JWT.Secret, cfg.JWT.AccessTTL, cfg.JWT.Issuer)
+	if err != nil {
+		return fmt.Errorf("create token manager: %w", err)
+	}
+	authMiddleware := middleware.NewAuth(tokens)
+
 	//services
+	requestService := requests.NewService(requests.NewPostgresRepository(pool))
+	// Модуль подбора (процент совместимости) подключается вторым аргументом, пока nil.
+	catalogService := catalog.NewService(catalog.NewPostgresRepository(pool), nil)
+	curatorService := curator.NewService(curator.NewPostgresRepository(pool))
+	chatService := chat.NewService(chat.NewPostgresRepository(pool))
+	faqBot, err := faq.New()
+	if err != nil {
+		return fmt.Errorf("load faq: %w", err)
+	}
 
 	//handlers register
 	serviceHandlers := make([]rest.ServiceHandler, 0)
 	//serviceHandlers = append(serviceHandlers, auth.NewHandler(validate, lg, &authService))
+	serviceHandlers = append(serviceHandlers,
+		requests.NewHandler(requestService, authMiddleware, lg),
+		catalog.NewHandler(catalogService, authMiddleware, lg),
+		curator.NewHandler(curatorService, authMiddleware, lg),
+		chat.NewHandler(chatService, authMiddleware, lg),
+		faq.NewHandler(faqBot),
+	)
 
 	//router
 	router := rest.NewRouter(serviceHandlers, "v1")
