@@ -14,6 +14,7 @@ import { GoalsStep } from './GoalsStep'
 import { SkillsStep } from './SkillsStep'
 import { TimeStep } from './TimeStep'
 import styles from '../Onboarding.module.css'
+import { useSession } from '../../../hooks/useSession'
 
 function validate(step: number, a: StudentAnswers) {
   if (step === 1) {
@@ -89,6 +90,7 @@ function toProfile(a: StudentAnswers): UpdateProfileRequest {
 
 export function StudentOnboarding({ step }: { step: number }) {
   const navigate = useNavigate()
+  const { logout } = useSession()
   const draft = useDraft('onboarding-student', initialStudent)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -132,7 +134,7 @@ export function StudentOnboarding({ step }: { step: number }) {
       onBack={step > 1 ? back : undefined}
       onNext={next}
       nextLabel={isSubmitting ? 'Отправляем...' : isLast ? 'Подобрать наставников' : 'Далее'}
-      onExit={() => navigate('/login')}
+      onExit={logout}
     >
       {step === 1 ? <AboutStep value={draft.value} update={draft.update} /> : null}
       {step === 2 ? <SkillsStep value={draft.value} update={draft.update} /> : null}

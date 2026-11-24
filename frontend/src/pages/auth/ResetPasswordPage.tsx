@@ -14,8 +14,9 @@ import {
   getMyAccount,
 } from '../../api/auth'
 import { ApiError } from '../../api/client'
-import { clearSession, saveSession, updateTokens, homeByRole } from '../../lib/auth'
+import { clearSession, saveSession, updateTokens } from '../../lib/auth'
 import styles from './Auth.module.css'
+import { pathAfterLogin } from '../../lib/afterLogin'
 
 type Step = 'email' | 'code' | 'password'
 type Errors = { email?: string; code?: string; password?: string; repeat?: string }
@@ -170,7 +171,7 @@ export function ResetPasswordPage() {
 
       saveSession(tokens.access_token, tokens.refresh_token, account.role)
 
-      navigate(homeByRole[account.role], { replace: true })
+      navigate(await pathAfterLogin(account.role), { replace: true })
     } catch (error) {
       clearSession()
 

@@ -14,6 +14,7 @@ import { isUrl } from '../../../lib/validation'
 import { SkillsStep } from './SkillsStep'
 import { FormatStep } from './FormatStep'
 import { TimeStep } from './TimeStep'
+import { useSession } from '../../../hooks/useSession'
 
 function validate(step: number, a: MentorAnswers, documents: File[]) {
   if (step === 1) {
@@ -70,6 +71,7 @@ function validate(step: number, a: MentorAnswers, documents: File[]) {
 
 export function MentorOnboarding({ step }: { step: number }) {
   const navigate = useNavigate()
+  const { logout } = useSession()
   const draft = useDraft('onboarding-mentor', initialMentor)
   const [documents, setDocuments] = useState<File[]>([])
   const [error, setError] = useState('')
@@ -155,7 +157,7 @@ export function MentorOnboarding({ step }: { step: number }) {
       onBack={step > 1 ? back : undefined}
       onNext={next}
       nextLabel={isSubmitting ? 'Отправляем...' : isLast ? 'Отправить на проверку' : 'Далее'}
-      onExit={() => navigate('/login')}
+      onExit={logout}
     >
       {step === 1 ? (
         <AboutStep

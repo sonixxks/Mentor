@@ -14,11 +14,11 @@ import {
   SlidersHorizontal,
   CircleHelp,
 } from 'lucide-react'
-import { Logo } from '../../components/Logo/Logo'
-import { Avatar } from '../../components/ui/Avatar/Avatar'
-import { Badge } from '../../components/ui/Badge/Badge'
-import { Button } from '../../components/ui/Button/Button'
-import { Card } from '../../components/ui/Card/Card'
+import { Logo } from '../../components/Logo'
+import { Avatar } from '../../components/ui/Avatar'
+import { Badge } from '../../components/ui/Badge'
+import { Button } from '../../components/ui/Button'
+import { Card } from '../../components/ui/Card'
 import { useSession } from '../../hooks/useSession'
 import styles from './StudentCabinet.module.css'
 import { Link } from 'react-router-dom'
