@@ -1,6 +1,5 @@
 import { emptySchedule } from '../../components/ui/HourGrid'
 import type { Schedule } from '../../components/ui/HourGrid'
-import { detectTimezone } from '../../lib/timezones'
 
 export type SkillLevel = 'beginner' | 'confident' | 'pro'
 
@@ -30,7 +29,6 @@ export type StudentAnswers = {
   success: string
   // Шаг 4 · Время и стиль
   hoursPerWeek: number
-  timezone: string
   schedule: Schedule
   style: string
 }
@@ -53,7 +51,6 @@ export const initialStudent: StudentAnswers = {
   durationMonths: 3,
   success: '',
   hoursPerWeek: 2,
-  timezone: detectTimezone(),
   schedule: emptySchedule(),
   style: '',
 }
@@ -82,7 +79,6 @@ export type MentorAnswers = {
   price: string
   // Шаг 4 · Время и стиль
   hoursPerWeek: number
-  timezone: string
   schedule: Schedule
   style: string
   visible: boolean
@@ -106,7 +102,6 @@ export const initialMentor: MentorAnswers = {
   paid: false,
   price: '',
   hoursPerWeek: 4,
-  timezone: detectTimezone(),
   schedule: emptySchedule(),
   style: '',
   visible: true,

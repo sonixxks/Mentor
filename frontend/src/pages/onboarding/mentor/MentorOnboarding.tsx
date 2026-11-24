@@ -7,7 +7,6 @@ import {
   addVerificationAssets,
   updateMyProfile,
 } from '../../../api/profiles'
-import type { AvailabilitySlots } from '../../../api/profiles'
 import { OnboardingShell } from '../OnboardingShell'
 import { STEPS } from '../steps'
 import { MAX_MONTHS, initialMentor } from '../types'
@@ -19,86 +18,6 @@ import { isUrl } from '../../../lib/validation'
 import { SkillsStep } from './SkillsStep'
 import { FormatStep } from './FormatStep'
 import { TimeStep } from './TimeStep'
-
-const EKATERINBURG_TIMEZONE = 'Asia/Yekaterinburg'
-
-const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
-
-function getTimezoneOffset(timezone: string): number {
-  const date = new Date('2026-01-07T12:00:00Z')
-
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(date)
-
-  const values = Object.fromEntries(
-    parts.map((part) => [part.type, part.value]),
-  )
-
-  const localTime = Date.UTC(
-    Number(values.year),
-    Number(values.month) - 1,
-    Number(values.day),
-    Number(values.hour),
-    Number(values.minute),
-    Number(values.second),
-  )
-
-  return (localTime - date.getTime()) / 60000
-}
-
-function convertSchedule(
-  schedule: MentorAnswers['schedule'],
-  timezone: string,
-): AvailabilitySlots {
-  const sourceOffset = getTimezoneOffset(timezone)
-  const targetOffset = getTimezoneOffset(EKATERINBURG_TIMEZONE)
-  const shift = (targetOffset - sourceOffset) / 60
-
-  if (!Number.isInteger(shift)) {
-    throw new Error('Не удалось преобразовать выбранный часовой пояс')
-  }
-
-  const result: AvailabilitySlots = {
-    mon: [],
-    tue: [],
-    wed: [],
-    thu: [],
-    fri: [],
-    sat: [],
-    sun: [],
-  }
-
-  DAYS.forEach((day, dayIndex) => {
-    schedule[day].forEach((hour) => {
-      const totalHours = dayIndex * 24 + hour + shift
-      const targetDay = ((Math.floor(totalHours / 24) % 7) + 7) % 7
-      const targetHour = ((totalHours % 24) + 24) % 24
-      const targetDayName = DAYS[targetDay]
-
-      if (targetHour < 8 || targetHour > 21) {
-        throw new Error(
-          'После перевода в Екатеринбургское время некоторые выбранные часы выходят за допустимый диапазон 08:00–22:00. Измените расписание.',
-        )
-      }
-
-      result[targetDayName].push(targetHour)
-    })
-  })
-
-  DAYS.forEach((day) => {
-    result[day] = [...new Set(result[day])].sort((a, b) => a - b)
-  })
-
-  return result
-}
 
 function mapStudentLevels(levels: string[]): string[] {
   return levels.map((level) => {
@@ -159,12 +78,6 @@ function validate(step: number, a: MentorAnswers, documents: File[]) {
 
     if (!hasTime) return 'Отметьте хотя бы один удобный час'
     if (!a.style) return 'Выберите стиль наставничества'
-
-    try {
-      convertSchedule(a.schedule, a.timezone)
-    } catch (error) {
-      return error instanceof Error ? error.message : 'Проверьте расписание'
-    }
   }
 
   return ''
@@ -209,8 +122,6 @@ export function MentorOnboarding({ step }: { step: number }) {
     const a = draft.value
 
     try {
-      const availabilitySlots = convertSchedule(a.schedule, a.timezone)
-
       const links = a.links
         .map((link) => link.trim())
         .filter(Boolean)
@@ -234,7 +145,7 @@ export function MentorOnboarding({ step }: { step: number }) {
         hourly_rate: a.paid ? Number(a.price) : 0,
         max_students: a.maxStudents,
         time_limit: a.hoursPerWeek,
-        availability_slots: availabilitySlots,
+        availability_slots: a.schedule,
         communication_style: a.style as 'friendly' | 'structured' | 'free',
         is_published: false,
         onboarding_completed: true,
