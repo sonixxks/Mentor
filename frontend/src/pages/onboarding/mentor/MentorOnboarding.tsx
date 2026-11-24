@@ -1,12 +1,8 @@
-
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { homeByRole } from '../../../lib/auth'
 import { ApiError } from '../../../api/client'
-import {
-  addVerificationAssets,
-  updateMyProfile,
-} from '../../../api/profiles'
+import { addVerificationAssets, updateMyProfile } from '../../../api/profiles'
 import { OnboardingShell } from '../OnboardingShell'
 import { STEPS } from '../steps'
 import { MAX_MONTHS, initialMentor } from '../types'
@@ -18,13 +14,6 @@ import { isUrl } from '../../../lib/validation'
 import { SkillsStep } from './SkillsStep'
 import { FormatStep } from './FormatStep'
 import { TimeStep } from './TimeStep'
-
-function mapStudentLevels(levels: string[]): string[] {
-  return levels.map((level) => {
-    if (level === 'base') return 'has_basics'
-    return level
-  })
-}
 
 function validate(step: number, a: MentorAnswers, documents: File[]) {
   if (step === 1) {
@@ -56,11 +45,7 @@ function validate(step: number, a: MentorAnswers, documents: File[]) {
   if (step === 3) {
     if (a.studentLevels.length === 0) return 'Выберите уровень учеников'
 
-    if (
-      a.durationFrom < 1 ||
-      a.durationTo > MAX_MONTHS ||
-      a.durationFrom > a.durationTo
-    ) {
+    if (a.durationFrom < 1 || a.durationTo > MAX_MONTHS || a.durationFrom > a.durationTo) {
       return `Проверьте длительность: от 1 до ${MAX_MONTHS} месяцев, «от» не больше «до»`
     }
 
@@ -98,9 +83,7 @@ function getApiErrorMessage(error: unknown): string {
     }
   }
 
-  return error instanceof Error
-    ? error.message
-    : 'Не удалось отправить анкету. Попробуйте ещё раз.'
+  return error instanceof Error ? error.message : 'Не удалось отправить анкету. Попробуйте ещё раз.'
 }
 
 export function MentorOnboarding({ step }: { step: number }) {
@@ -122,16 +105,14 @@ export function MentorOnboarding({ step }: { step: number }) {
     const a = draft.value
 
     try {
-      const links = a.links
-        .map((link) => link.trim())
-        .filter(Boolean)
+      const links = a.links.map((link) => link.trim()).filter(Boolean)
 
       await updateMyProfile({
         first_name: a.firstName.trim(),
         last_name: a.lastName.trim(),
         middle_name: a.middleName.trim() || undefined,
         job_title: a.position.trim(),
-        company: a.company.trim() || null,
+        company: a.selfEmployed ? null : a.company.trim() || null,
         experience: a.experience,
         bio: a.about.trim(),
         current_skills: a.skills.map((skill) => ({
@@ -139,7 +120,7 @@ export function MentorOnboarding({ step }: { step: number }) {
           level: skill.level === 'expert' ? 3 : 2,
         })),
         help_topics: a.goals,
-        target_student_levels: mapStudentLevels(a.studentLevels),
+        target_student_levels: a.studentLevels,
         min_duration_months: a.durationFrom,
         max_duration_months: a.durationTo,
         hourly_rate: a.paid ? Number(a.price) : 0,
@@ -191,13 +172,7 @@ export function MentorOnboarding({ step }: { step: number }) {
       current={step}
       onBack={step > 1 ? back : undefined}
       onNext={next}
-      nextLabel={
-        isSubmitting
-          ? 'Отправляем...'
-          : isLast
-            ? 'Отправить на проверку'
-            : 'Далее'
-      }
+      nextLabel={isSubmitting ? 'Отправляем...' : isLast ? 'Отправить на проверку' : 'Далее'}
       onExit={() => navigate('/login')}
     >
       {step === 1 ? (
@@ -209,17 +184,11 @@ export function MentorOnboarding({ step }: { step: number }) {
         />
       ) : null}
 
-      {step === 2 ? (
-        <SkillsStep value={draft.value} update={draft.update} />
-      ) : null}
+      {step === 2 ? <SkillsStep value={draft.value} update={draft.update} /> : null}
 
-      {step === 3 ? (
-        <FormatStep value={draft.value} update={draft.update} />
-      ) : null}
+      {step === 3 ? <FormatStep value={draft.value} update={draft.update} /> : null}
 
-      {step === 4 ? (
-        <TimeStep value={draft.value} update={draft.update} />
-      ) : null}
+      {step === 4 ? <TimeStep value={draft.value} update={draft.update} /> : null}
 
       {error ? <p className={styles.error}>{error}</p> : null}
     </OnboardingShell>

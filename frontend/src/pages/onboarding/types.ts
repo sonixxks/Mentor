@@ -66,6 +66,7 @@ export type MentorAnswers = {
   middleName: string
   position: string
   company: string
+  selfEmployed: boolean
   experience: string
   about: string
   links: string[]
@@ -92,6 +93,7 @@ export const initialMentor: MentorAnswers = {
   middleName: '',
   position: '',
   company: '',
+  selfEmployed: false,
   experience: '',
   about: '',
   links: [''],

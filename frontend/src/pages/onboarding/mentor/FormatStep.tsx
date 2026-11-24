@@ -9,7 +9,7 @@ import { MAX_MONTHS } from '../types'
 
 const LEVELS = [
   { value: 'beginner', label: 'Начинающие' },
-  { value: 'base', label: 'Есть база' },
+  { value: 'has_basics', label: 'Есть база' },
   { value: 'advanced', label: 'Продвинутые' },
 ]
 
