@@ -12,6 +12,7 @@ import { StudentCatalog } from '../pages/student/StudentCatalog'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { RequireAuth } from './RequireAuth'
 import { getRole, getToken, homeByRole } from '../lib/auth'
+import { MentorProfilePage } from '../pages/student/MentorProfilePage'
 
 function RequireGuest() {
   const token = getToken()
@@ -67,6 +68,11 @@ export const router = createBrowserRouter([
         children: [
           { path: '/student', element: <StudentCabinet /> },
           { path: '/student/catalog', element: <StudentCatalog /> },
+          {
+            path: '/student/mentors/:id',
+            element: <MentorProfilePage />,
+            handle: { title: 'Профиль наставника', back: true },
+          },
           { path: '/student/*', element: <ComingSoonPage /> },
         ],
       },
