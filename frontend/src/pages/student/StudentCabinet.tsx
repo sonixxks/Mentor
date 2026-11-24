@@ -1,30 +1,20 @@
 import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
-  Bell,
   CalendarDays,
   Check,
   ChevronRight,
-  LayoutGrid,
-  LogOut,
-  MessageCircle,
-  Search,
-  Sparkles,
-  BriefcaseBusiness,
-  SlidersHorizontal,
   CircleHelp,
+  Search,
+  SlidersHorizontal,
 } from 'lucide-react'
-import { Logo } from '../../components/Logo'
 import { Avatar } from '../../components/ui/Avatar'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
-import { useSession } from '../../hooks/useSession'
-import styles from './StudentCabinet.module.css'
-import { Link } from 'react-router-dom'
-import { StudentCatalog } from './StudentCatalog'
 import { StudentMentorProfile } from './StudentMentorProfile'
 import type { Mentor as ProfileMentor } from './StudentMentorProfile'
+import styles from './StudentCabinet.module.css'
 
 type Mentor = {
   id: number
@@ -97,7 +87,6 @@ const mentors: Mentor[] = [
 ]
 
 export function StudentCabinet() {
-  const { logout } = useSession()
   const location = useLocation()
 
   const isEmptyDemo =
@@ -132,340 +121,255 @@ export function StudentCabinet() {
   }
 
   return (
-    <div className={styles.shell}>
-      <aside className={styles.sidebar}>
-        <div className={styles.logo}>
-          <Logo to="/student" />
+    <>
+      {selectedMentor ? (
+        <div className={styles.content}>
+          <StudentMentorProfile
+            mentor={selectedMentor}
+            isCompared={false}
+            isSent={sentRequests.includes(selectedMentor.id)}
+            onBack={() => setSelectedMentor(null)}
+            onCompare={() => {}}
+            onRequest={() => sendRequest(selectedMentor.id)}
+          />
         </div>
-
-        <nav className={styles.navigation}>
-          <Link
-            to="/student?demo=1"
-            className={`${styles.navItem} ${
-              location.pathname === '/student' ? styles.navActive : ''
-            }`}
-          >
-            <Sparkles size={19} />
-            <span>Подбор</span>
-          </Link>
-
-          <Link
-            to="/student/catalog?demo=1"
-            className={`${styles.navItem} ${
-              location.pathname === '/student/catalog' ? styles.navActive : ''
-            }`}
-          >
-            <Search size={19} />
-            <span>Каталог</span>
-          </Link>
-
-          <div className={styles.navItem}>
-            <BriefcaseBusiness size={19} />
-            <span>Мои заявки</span>
-          </div>
-
-          <div className={styles.navItem}>
-            <LayoutGrid size={19} />
-            <span>Пространство</span>
-          </div>
-
-          <div className={styles.navItem}>
-            <CalendarDays size={19} />
-            <span>Календарь</span>
-          </div>
-
-          <div className={styles.navItem}>
-            <MessageCircle size={19} />
-            <span>Чат</span>
-            <span className={styles.chatCount}>2</span>
-          </div>
-        </nav>
-
-        <Card className={styles.helpCard}>
-          <h3>Не можешь выбрать?</h3>
-          <p>Куратор поможет подобрать наставника вручную.</p>
-          <button type="button" className={styles.textButton}>
-            Запросить помощь
-          </button>
-        </Card>
-
-        <button type="button" className={styles.logout} onClick={logout}>
-          <LogOut size={19} />
-          <span>Выйти</span>
-        </button>
-      </aside>
-
-      <main className={styles.main}>
-        <header className={styles.topbar}>
-          <h1>
-            {selectedMentor
-              ? 'Профиль наставника'
-              : location.pathname === '/student/catalog'
-                ? 'Каталог'
-                : 'Подбор'}
-          </h1>
-
-          <div className={styles.userInfo}>
-            <button type="button" className={styles.iconButton} aria-label="Уведомления">
-              <Bell size={20} />
-            </button>
-            <Avatar name="Екатерина Смирнова" size="m" />
-          </div>
-        </header>
-
-        {selectedMentor ? (
-          <div className={styles.content}>
-            <StudentMentorProfile
-              mentor={selectedMentor}
-              isCompared={false}
-              isSent={sentRequests.includes(selectedMentor.id)}
-              onBack={() => setSelectedMentor(null)}
-              onCompare={() => {}}
-              onRequest={() => sendRequest(selectedMentor.id)}
-            />
-          </div>
-        ) : location.pathname === '/student/catalog' ? (
-          <div className={styles.content}>
-            <StudentCatalog />
-          </div>
-        ) : isEmptyDemo ? (
-          <div className={styles.content}>
-            <section className={styles.emptyState}>
-              <div className={styles.emptyIllustration}>
-                <div className={styles.searchOrbit}>
-                  <span className={styles.orbitDot} />
-                  <span className={styles.orbitDotSecond} />
-                  <div className={styles.searchIcon}>
-                    <Search size={34} />
-                  </div>
+      ) : isEmptyDemo ? (
+        <div className={styles.content}>
+          <section className={styles.emptyState}>
+            <div className={styles.emptyIllustration}>
+              <div className={styles.searchOrbit}>
+                <span className={styles.orbitDot} />
+                <span className={styles.orbitDotSecond} />
+                <div className={styles.searchIcon}>
+                  <Search size={34} />
                 </div>
               </div>
+            </div>
 
-              <h2>Пока нет подходящих наставников</h2>
+            <h2>Пока нет подходящих наставников</h2>
 
-              <p className={styles.emptyDescription}>
-                По Computer Vision и твоему расписанию совпадений выше 60% пока нет. Новые
-                наставники регистрируются каждую неделю — сообщим, как только появится подходящий.
-              </p>
+            <p className={styles.emptyDescription}>
+              По Computer Vision и твоему расписанию совпадений выше 60% пока нет. Новые наставники
+              регистрируются каждую неделю — сообщим, как только появится подходящий.
+            </p>
 
-              <div className={styles.emptyActions}>
-                <button type="button" className={styles.outlineButton}>
-                  <CircleHelp size={18} />
-                  Запросить помощь куратора
-                </button>
-
-                <button type="button" className={styles.outlineButton}>
-                  Смягчить фильтры в каталоге
-                </button>
-              </div>
-
-              <button type="button" className={styles.refineButton}>
-                Уточнить анкету
+            <div className={styles.emptyActions}>
+              <button type="button" className={styles.outlineButton}>
+                <CircleHelp size={18} />
+                Запросить помощь куратора
               </button>
-            </section>
-          </div>
-        ) : (
-          <div className={styles.content}>
-            <section className={styles.heading}>
-              <div>
-                <h2>10 наставников под твои цели</h2>
-                <p>Data Science, нейросети · 2 ч в неделю · стажировка за 6 месяцев</p>
-              </div>
 
-              <div className={styles.headingActions}>
-                <Button variant="secondary" size="md" disabled>
-                  Уточнить анкету
-                </Button>
-                <Button variant="secondary" size="md" disabled>
-                  <SlidersHorizontal size={16} />
-                  Каталог с фильтрами
-                </Button>
-              </div>
-            </section>
+              <button type="button" className={styles.outlineButton}>
+                Смягчить фильтры в каталоге
+              </button>
+            </div>
 
-            <section className={styles.featured}>
-              <div className={styles.featuredAvatar}>
-                <button
-                  type="button"
-                  className={styles.profileLink}
-                  onClick={() =>
-                    openMentorProfile({
-                      id: 100,
-                      name: 'Алексей Миронов',
-                      position: 'Senior Data Scientist',
-                      experience: '7 лет',
-                      rating: '4,9',
-                      match: 99,
-                      skills: ['Data Science', 'Нейросети'],
-                      hours: '2 ч/нед',
-                      price: 'Бесплатно',
-                    })
-                  }
-                >
-                  <Avatar name="Алексей Миронов" size="l" />
-                </button>
-              </div>
+            <button type="button" className={styles.refineButton}>
+              Уточнить анкету
+            </button>
+          </section>
+        </div>
+      ) : (
+        <div className={styles.content}>
+          <section className={styles.heading}>
+            <div>
+              <h2>10 наставников под твои цели</h2>
+              <p>Data Science, нейросети · 2 ч в неделю · стажировка за 6 месяцев</p>
+            </div>
 
-              <div className={styles.featuredInfo}>
-                <Badge variant="match">Лучшее совпадение</Badge>
-                <button
-                  type="button"
-                  className={styles.profileName}
-                  onClick={() =>
-                    openMentorProfile({
-                      id: 100,
-                      name: 'Алексей Миронов',
-                      position: 'Senior Data Scientist',
-                      experience: '7 лет',
-                      rating: '4,9',
-                      match: 99,
-                      skills: ['Data Science', 'Нейросети'],
-                      hours: '2 ч/нед',
-                      price: 'Бесплатно',
-                    })
-                  }
-                >
-                  <h2>Алексей Миронов</h2>
-                </button>
-                <p>Senior Data Scientist · 7 лет в нейросетях · рейтинг 4,9 · 2 ч в неделю</p>
+            <div className={styles.headingActions}>
+              <Button variant="secondary" size="md" disabled>
+                Уточнить анкету
+              </Button>
+              <Button variant="secondary" size="md" to="/student/catalog">
+                <SlidersHorizontal size={16} />
+                Каталог с фильтрами
+              </Button>
+            </div>
+          </section>
 
-                <div className={styles.featuredActions}>
-                  <Button onClick={() => sendRequest(100)} disabled={sentRequests.includes(100)}>
-                    {sentRequests.includes(100) ? (
-                      <>
-                        <Check size={16} /> Заявка отправлена
-                      </>
-                    ) : (
-                      'Отправить заявку'
-                    )}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() =>
-                      openMentorProfile({
-                        id: 100,
-                        name: 'Алексей Миронов',
-                        position: 'Senior Data Scientist',
-                        experience: '7 лет',
-                        rating: '4,9',
-                        match: 99,
-                        skills: ['Data Science', 'Нейросети'],
-                        hours: '2 ч/нед',
-                        price: 'Бесплатно',
-                      })
-                    }
-                  >
-                    Профиль
-                  </Button>
-                </div>
-              </div>
-
-              <div className={styles.matchPanel}>
-                <div className={styles.matchValue}>
-                  <strong>99%</strong>
-                  <span>совместимость</span>
-                </div>
-
-                {[
-                  ['Навыки', 96],
-                  ['Цели', 92],
-                  ['Время', 85],
-                  ['Стиль', 90],
-                ].map(([label, value]) => (
-                  <div className={styles.matchRow} key={label}>
-                    <span>{label}</span>
-                    <div className={styles.progress}>
-                      <span style={{ width: `${value}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className={styles.mentorGrid}>
-              {mentors.slice(0, visibleCount).map((mentor, index) => (
-                <Card className={styles.mentorCard} key={mentor.id}>
-                  <div className={styles.cardVisual}>
-                    <Badge variant="match">{mentor.match}% совпадение</Badge>
-                    <span>№{index + 2}</span>
-
-                    <button
-                      type="button"
-                      className={styles.profileLink}
-                      onClick={() => openMentorProfile(mentor)}
-                    >
-                      <Avatar name={mentor.name} size="l" />
-                    </button>
-                  </div>
-
-                  <div className={styles.mentorName}>
-                    <button
-                      type="button"
-                      className={styles.profileName}
-                      onClick={() => openMentorProfile(mentor)}
-                    >
-                      {mentor.name}
-                    </button>
-                    <span>★ {mentor.rating}</span>
-                  </div>
-
-                  <p className={styles.position}>
-                    {mentor.position} · {mentor.experience}
-                  </p>
-
-                  <div className={styles.skills}>
-                    {mentor.skills.map((skill) => (
-                      <span key={skill}>{skill}</span>
-                    ))}
-                  </div>
-
-                  <div className={styles.mentorMeta}>
-                    <span>
-                      <CalendarDays size={15} />
-                      {mentor.hours}
-                    </span>
-                    <strong>{mentor.price}</strong>
-                  </div>
-
-                  <div className={styles.cardActions}>
-                    <Button
-                      size="sm"
-                      fullWidth
-                      onClick={() => sendRequest(mentor.id)}
-                      disabled={sentRequests.includes(mentor.id)}
-                    >
-                      {sentRequests.includes(mentor.id) ? 'Заявка отправлена' : 'Отправить заявку'}
-                    </Button>
-
-                    <button
-                      type="button"
-                      className={styles.compareButton}
-                      aria-label={`Добавить ${mentor.name} к сравнению`}
-                      disabled
-                    >
-                      +
-                    </button>
-                  </div>
-                </Card>
-              ))}
-            </section>
-
-            {visibleCount < mentors.length && (
+          <section className={styles.featured}>
+            <div className={styles.featuredAvatar}>
               <button
                 type="button"
-                className={styles.showMore}
-                onClick={() => setVisibleCount(mentors.length)}
+                className={styles.profileLink}
+                onClick={() =>
+                  openMentorProfile({
+                    id: 100,
+                    name: 'Алексей Миронов',
+                    position: 'Senior Data Scientist',
+                    experience: '7 лет',
+                    rating: '4,9',
+                    match: 99,
+                    skills: ['Data Science', 'Нейросети'],
+                    hours: '2 ч/нед',
+                    price: 'Бесплатно',
+                  })
+                }
               >
-                Показать ещё 5 из подборки <ChevronRight size={16} />
+                <Avatar name="Алексей Миронов" size="l" />
               </button>
-            )}
+            </div>
 
-            <p className={styles.demoNote}>
-              Демонстрационные данные. Заявки пока не отправляются на сервер.
-            </p>
-          </div>
-        )}
-      </main>
-    </div>
+            <div className={styles.featuredInfo}>
+              <Badge variant="match">Лучшее совпадение</Badge>
+              <button
+                type="button"
+                className={styles.profileName}
+                onClick={() =>
+                  openMentorProfile({
+                    id: 100,
+                    name: 'Алексей Миронов',
+                    position: 'Senior Data Scientist',
+                    experience: '7 лет',
+                    rating: '4,9',
+                    match: 99,
+                    skills: ['Data Science', 'Нейросети'],
+                    hours: '2 ч/нед',
+                    price: 'Бесплатно',
+                  })
+                }
+              >
+                <h2>Алексей Миронов</h2>
+              </button>
+              <p>Senior Data Scientist · 7 лет в нейросетях · рейтинг 4,9 · 2 ч в неделю</p>
+
+              <div className={styles.featuredActions}>
+                <Button onClick={() => sendRequest(100)} disabled={sentRequests.includes(100)}>
+                  {sentRequests.includes(100) ? (
+                    <>
+                      <Check size={16} /> Заявка отправлена
+                    </>
+                  ) : (
+                    'Отправить заявку'
+                  )}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    openMentorProfile({
+                      id: 100,
+                      name: 'Алексей Миронов',
+                      position: 'Senior Data Scientist',
+                      experience: '7 лет',
+                      rating: '4,9',
+                      match: 99,
+                      skills: ['Data Science', 'Нейросети'],
+                      hours: '2 ч/нед',
+                      price: 'Бесплатно',
+                    })
+                  }
+                >
+                  Профиль
+                </Button>
+              </div>
+            </div>
+
+            <div className={styles.matchPanel}>
+              <div className={styles.matchValue}>
+                <strong>99%</strong>
+                <span>совместимость</span>
+              </div>
+
+              {[
+                ['Навыки', 96],
+                ['Цели', 92],
+                ['Время', 85],
+                ['Стиль', 90],
+              ].map(([label, value]) => (
+                <div className={styles.matchRow} key={label}>
+                  <span>{label}</span>
+                  <div className={styles.progress}>
+                    <span style={{ width: `${value}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className={styles.mentorGrid}>
+            {mentors.slice(0, visibleCount).map((mentor, index) => (
+              <Card className={styles.mentorCard} key={mentor.id}>
+                <div className={styles.cardVisual}>
+                  <Badge variant="match">{mentor.match}% совпадение</Badge>
+                  <span>№{index + 2}</span>
+
+                  <button
+                    type="button"
+                    className={styles.profileLink}
+                    onClick={() => openMentorProfile(mentor)}
+                  >
+                    <Avatar name={mentor.name} size="l" />
+                  </button>
+                </div>
+
+                <div className={styles.mentorName}>
+                  <button
+                    type="button"
+                    className={styles.profileName}
+                    onClick={() => openMentorProfile(mentor)}
+                  >
+                    {mentor.name}
+                  </button>
+                  <span>★ {mentor.rating}</span>
+                </div>
+
+                <p className={styles.position}>
+                  {mentor.position} · {mentor.experience}
+                </p>
+
+                <div className={styles.skills}>
+                  {mentor.skills.map((skill) => (
+                    <span key={skill}>{skill}</span>
+                  ))}
+                </div>
+
+                <div className={styles.mentorMeta}>
+                  <span>
+                    <CalendarDays size={15} />
+                    {mentor.hours}
+                  </span>
+                  <strong>{mentor.price}</strong>
+                </div>
+
+                <div className={styles.cardActions}>
+                  <Button
+                    size="sm"
+                    fullWidth
+                    onClick={() => sendRequest(mentor.id)}
+                    disabled={sentRequests.includes(mentor.id)}
+                  >
+                    {sentRequests.includes(mentor.id) ? 'Заявка отправлена' : 'Отправить заявку'}
+                  </Button>
+
+                  <button
+                    type="button"
+                    className={styles.compareButton}
+                    aria-label={`Добавить ${mentor.name} к сравнению`}
+                    disabled
+                  >
+                    +
+                  </button>
+                </div>
+              </Card>
+            ))}
+          </section>
+
+          {visibleCount < mentors.length && (
+            <button
+              type="button"
+              className={styles.showMore}
+              onClick={() => setVisibleCount(mentors.length)}
+            >
+              Показать ещё 5 из подборки <ChevronRight size={16} />
+            </button>
+          )}
+
+          <p className={styles.demoNote}>
+            Демонстрационные данные. Заявки пока не отправляются на сервер.
+          </p>
+        </div>
+      )}
+    </>
   )
 }

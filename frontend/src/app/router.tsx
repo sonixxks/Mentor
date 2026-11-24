@@ -5,7 +5,10 @@ import { RegisterPage } from '../pages/auth/RegisterPage'
 import { VerifyEmailPage } from '../pages/auth/VerifyEmailPage'
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage'
 import { OnboardingPage } from '../pages/onboarding/OnboardingPage'
-import { CabinetPage } from '../pages/CabinetPage'
+import { CabinetLayout } from '../layouts/CabinetLayout'
+import { ComingSoonPage } from '../pages/ComingSoonPage'
+import { StudentCabinet } from '../pages/student/StudentCabinet'
+import { StudentCatalog } from '../pages/student/StudentCatalog'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { RequireAuth } from './RequireAuth'
 import { getRole, getToken, homeByRole } from '../lib/auth'
@@ -59,17 +62,39 @@ export const router = createBrowserRouter([
   {
     element: <RequireAuth roles={['student']} />,
     children: [
-      { path: '/student', element: <CabinetPage /> },
-      { path: '/student/catalog', element: <CabinetPage /> },
+      {
+        element: <CabinetLayout />,
+        children: [
+          { path: '/student', element: <StudentCabinet /> },
+          { path: '/student/catalog', element: <StudentCatalog /> },
+          { path: '/student/*', element: <ComingSoonPage /> },
+        ],
+      },
     ],
   },
   {
     element: <RequireAuth roles={['mentor']} />,
-    children: [{ path: '/mentor', element: <CabinetPage /> }],
+    children: [
+      {
+        element: <CabinetLayout />,
+        children: [
+          { path: '/mentor', element: <ComingSoonPage /> },
+          { path: '/mentor/*', element: <ComingSoonPage /> },
+        ],
+      },
+    ],
   },
   {
     element: <RequireAuth roles={['curator', 'admin']} />,
-    children: [{ path: '/curator', element: <CabinetPage /> }],
+    children: [
+      {
+        element: <CabinetLayout />,
+        children: [
+          { path: '/curator', element: <ComingSoonPage /> },
+          { path: '/curator/*', element: <ComingSoonPage /> },
+        ],
+      },
+    ],
   },
 
   { path: '*', element: <NotFoundPage /> },
