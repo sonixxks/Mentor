@@ -194,7 +194,7 @@
   margin-bottom: 26px;
   padding: 17px;
   border-radius: var(--radius-xl);
-  background: var(--gradient-accent);
+  background: linear-gradient(115deg, #1749dc 0%, #203fc4 55%, #142f91 100%);
 }
 
 .featuredAvatar {
@@ -343,6 +343,36 @@
   font-weight: 700;
 }
 
+.profileLink,
+.profileName {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.profileLink {
+  display: block;
+  border-radius: 20px;
+}
+
+.profileName {
+  text-align: left;
+  font-weight: 600;
+}
+
+.profileName:hover {
+  color: var(--color-accent-primary);
+}
+
+.profileLink:focus-visible,
+.profileName:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 4px;
+}
+
 .position {
   margin-top: 5px;
   color: var(--color-text-secondary);
@@ -437,8 +467,6 @@
   text-align: center;
 }
 
-/* Экран «Пока нет подходящих наставников» */
-
 .emptyState {
   display: flex;
   flex-direction: column;
@@ -461,7 +489,6 @@
   overflow: visible;
 }
 
-
 .emptyIllustration::before {
   content: '';
   position: absolute;
@@ -480,7 +507,6 @@
     #07143d 100%
   );
 }
-
 
 .emptyIllustration::after {
   content: '';
@@ -607,6 +633,16 @@
   color: var(--color-accent-light);
   font: 600 14px var(--font-body);
   cursor: pointer;
+}
+
+.featuredInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.featuredInfo h2 {
+  margin: 14px 0 8px;
 }
 
 @media (max-width: 1250px) {

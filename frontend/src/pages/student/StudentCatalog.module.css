@@ -301,8 +301,8 @@
 
 .filterGroup h3 {
   margin: 0;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .chips {
@@ -371,6 +371,19 @@
   border-radius: 999px;
   accent-color: var(--color-accent-primary);
   cursor: pointer;
+}
+
+.priceInputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.priceInput {
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  font-size: 12px;
 }
 
 .switchRow {
@@ -595,24 +608,44 @@
   font-size: 11px;
 }
 
-/* Адаптация */
+.profileLink,
+.profileName {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
 
-@media (max-width: 1250px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr) 245px;
-    gap: 16px;
-  }
+.profileLink {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 20px;
+}
 
+.profileName {
+  text-align: left;
+  font-weight: 600;
+}
+
+.profileName:hover {
+  color: var(--color-accent-primary);
+}
+
+.profileLink:focus-visible,
+.profileName:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 4px;
+}
+
+@media (max-width: 1600px) {
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .compareBar {
-    right: 30%;
-  }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .layout {
     grid-template-columns: 1fr;
   }
@@ -622,7 +655,7 @@
   }
 
   .grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .compareBar {
@@ -632,10 +665,6 @@
 
 @media (max-width: 600px) {
   .toolbar {
-    grid-template-columns: 1fr;
-  }
-
-  .grid {
     grid-template-columns: 1fr;
   }
 

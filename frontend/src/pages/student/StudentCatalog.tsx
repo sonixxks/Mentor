@@ -4,6 +4,8 @@ import { Avatar } from '../../components/ui/Avatar/Avatar'
 import styles from './StudentCatalog.module.css'
 import { Input } from '../../components/ui/Input/Input'
 import { Select } from '../../components/ui/Select/Select'
+import { Slider } from '../../components/ui/Slider/Slider'
+import { StudentMentorProfile } from './StudentMentorProfile'
 
 type Mentor = {
   id: number
@@ -132,14 +134,16 @@ export function StudentCatalog() {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('match')
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
-  const [priceFilter, setPriceFilter] = useState('any')
-  const [hoursFilter, setHoursFilter] = useState('any')
+  const [priceMin, setPriceMin] = useState(0)
+  const [priceMax, setPriceMax] = useState(10000)
+  const [hoursLimit, setHoursLimit] = useState(1)
   const [minMatch, setMinMatch] = useState(70)
-  const [ratingFilter, setRatingFilter] = useState('any')
+  const [ratingMin, setRatingMin] = useState(1)
   const [onlyFreePlaces, setOnlyFreePlaces] = useState(true)
   const [compared, setCompared] = useState<number[]>([])
   const [sentRequests, setSentRequests] = useState<number[]>([])
   const [showComparison, setShowComparison] = useState(false)
+  const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null)
 
   const filteredMentors = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -155,22 +159,13 @@ export function StudentCatalog() {
         selectedSkills.length === 0 ||
         selectedSkills.every((skill) => mentor.skills.includes(skill))
 
-      const matchesPrice =
-        priceFilter === 'any' ||
-        (priceFilter === 'free' && mentor.price === 0) ||
-        (priceFilter === '1500' && mentor.price <= 1500) ||
-        (priceFilter === '3000' && mentor.price <= 3000)
+      const matchesPrice = mentor.price >= priceMin && mentor.price <= priceMax
 
-      const matchesHours =
-        hoursFilter === 'any' ||
-        (hoursFilter === '1-2' && mentor.hours >= 1 && mentor.hours <= 2) ||
-        (hoursFilter === '3-5' && mentor.hours >= 3 && mentor.hours <= 5) ||
-        (hoursFilter === '5+' && mentor.hours > 5)
+      // time_limit наставника — максимум часов, которые он готов уделять ученику.
+      // Значение 10 в анкете означает «10 и более».
+      const matchesHours = mentor.hours >= hoursLimit
 
-      const matchesRating =
-        ratingFilter === 'any' ||
-        (ratingFilter === '4.5' && mentor.rating >= 4.5) ||
-        (ratingFilter === '4.8' && mentor.rating >= 4.8)
+      const matchesRating = mentor.rating >= ratingMin
 
       return (
         matchesQuery &&
@@ -192,10 +187,11 @@ export function StudentCatalog() {
     query,
     sort,
     selectedSkills,
-    priceFilter,
-    hoursFilter,
+    priceMin,
+    priceMax,
+    hoursLimit,
     minMatch,
-    ratingFilter,
+    ratingMin,
     onlyFreePlaces,
   ])
 
@@ -225,14 +221,28 @@ export function StudentCatalog() {
     setQuery('')
     setSort('match')
     setSelectedSkills([])
-    setPriceFilter('any')
-    setHoursFilter('any')
+    setPriceMin(0)
+    setPriceMax(10000)
+    setHoursLimit(1)
     setMinMatch(70)
-    setRatingFilter('any')
+    setRatingMin(1)
     setOnlyFreePlaces(false)
   }
 
   const comparedMentors = mentors.filter((mentor) => compared.includes(mentor.id))
+
+  if (selectedMentor) {
+    return (
+      <StudentMentorProfile
+        mentor={selectedMentor}
+        isCompared={compared.includes(selectedMentor.id)}
+        isSent={sentRequests.includes(selectedMentor.id)}
+        onBack={() => setSelectedMentor(null)}
+        onCompare={() => toggleCompare(selectedMentor.id)}
+        onRequest={() => sendRequest(selectedMentor.id)}
+      />
+    )
+  }
 
   return (
     <div className={styles.catalog}>
@@ -272,10 +282,27 @@ export function StudentCatalog() {
                 return (
                   <article className={styles.mentorCard} key={mentor.id}>
                     <div className={styles.cardHeader}>
-                      <Avatar name={mentor.name} size="l" />
+                      <button
+                        type="button"
+                        className={styles.profileLink}
+                        onClick={() => setSelectedMentor(mentor)}
+                        aria-label={`Открыть профиль ${mentor.name}`}
+                      >
+                        <Avatar name={mentor.name} size="l" />
+                      </button>
 
                       <div className={styles.mentorInfo}>
-                        <h3>{mentor.name}</h3>
+                        <h3>
+                          <h3>
+                            <button
+                              type="button"
+                              className={styles.profileName}
+                              onClick={() => setSelectedMentor(mentor)}
+                            >
+                              {mentor.name}
+                            </button>
+                          </h3>
+                        </h3>
                         <p>
                           {mentor.position} · {mentor.experience}
                         </p>
@@ -382,74 +409,72 @@ export function StudentCatalog() {
 
           <div className={styles.filterGroup}>
             <h3>Стоимость занятия</h3>
-            <div className={styles.chips}>
-              <Chip active={priceFilter === 'any'} onClick={() => setPriceFilter('any')}>
-                Любая
-              </Chip>
-              <Chip active={priceFilter === 'free'} onClick={() => setPriceFilter('free')}>
-                Бесплатно
-              </Chip>
-              <Chip active={priceFilter === '1500'} onClick={() => setPriceFilter('1500')}>
-                до 1 500 ₽
-              </Chip>
-              <Chip active={priceFilter === '3000'} onClick={() => setPriceFilter('3000')}>
-                до 3 000 ₽
-              </Chip>
+            <div className={styles.priceInputs}>
+              <Input
+                className={styles.priceInput}
+                label="От, ₽"
+                type="number"
+                min={0}
+                max={10000}
+                value={String(priceMin)}
+                onChange={(event) => {
+                  const value = Math.min(10000, Math.max(0, Number(event.target.value) || 0))
+                  setPriceMin(Math.min(value, priceMax))
+                }}
+              />
+              <Input
+                className={styles.priceInput}
+                label="До, ₽"
+                type="number"
+                min={0}
+                max={10000}
+                value={String(priceMax)}
+                onChange={(event) => {
+                  const value = Math.min(10000, Math.max(0, Number(event.target.value) || 0))
+                  setPriceMax(Math.max(value, priceMin))
+                }}
+              />
             </div>
             <p className={styles.filterHint}>Оплата — напрямую наставнику, вне платформы</p>
           </div>
 
           <div className={styles.filterGroup}>
-            <h3>Время в неделю</h3>
-            <div className={styles.chips}>
-              <Chip active={hoursFilter === '1-2'} onClick={() => setHoursFilter('1-2')}>
-                1–2 ч
-              </Chip>
-              <Chip active={hoursFilter === '3-5'} onClick={() => setHoursFilter('3-5')}>
-                3–5 ч
-              </Chip>
-              <Chip active={hoursFilter === '5+'} onClick={() => setHoursFilter('5+')}>
-                5+ ч
-              </Chip>
-            </div>
-            <button
-              type="button"
-              className={styles.resetSmall}
-              onClick={() => setHoursFilter('any')}
-            >
-              Не важно
-            </button>
-          </div>
-
-          <div className={styles.filterGroup}>
-            <div className={styles.rangeHeading}>
-              <h3>Минимальное совпадение</h3>
-              <strong>от {minMatch}%</strong>
-            </div>
-            <input
-              className={styles.range}
-              type="range"
-              min="0"
-              max="100"
-              step="5"
-              value={minMatch}
-              onChange={(event) => setMinMatch(Number(event.target.value))}
+            <Slider
+              label="Время в неделю"
+              value={hoursLimit}
+              min={1}
+              max={10}
+              step={1}
+              onChange={setHoursLimit}
+              format={(value) => (value === 10 ? '10+ ч' : `${value} ч`)}
+              marks={['1 ч', '5 ч', '10+ ч']}
             />
           </div>
 
           <div className={styles.filterGroup}>
-            <h3>Рейтинг</h3>
-            <div className={styles.chips}>
-              <Chip active={ratingFilter === 'any'} onClick={() => setRatingFilter('any')}>
-                Любой
-              </Chip>
-              <Chip active={ratingFilter === '4.5'} onClick={() => setRatingFilter('4.5')}>
-                от 4,5
-              </Chip>
-              <Chip active={ratingFilter === '4.8'} onClick={() => setRatingFilter('4.8')}>
-                от 4,8
-              </Chip>
-            </div>
+            <Slider
+              label="Минимальное совпадение"
+              value={minMatch}
+              min={0}
+              max={100}
+              step={5}
+              onChange={setMinMatch}
+              format={(value) => `от ${value}%`}
+              marks={['0%', '50%', '100%']}
+            />
+          </div>
+
+          <div className={styles.filterGroup}>
+            <Slider
+              label="Рейтинг"
+              value={ratingMin}
+              min={1}
+              max={5}
+              step={0.1}
+              onChange={setRatingMin}
+              format={(value) => `от ${value.toFixed(1).replace('.', ',')} ★`}
+              marks={['1,0', '3,0', '5,0']}
+            />
           </div>
 
           <label className={styles.switchRow}>

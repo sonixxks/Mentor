@@ -23,6 +23,8 @@ import { useSession } from '../../hooks/useSession'
 import styles from './StudentCabinet.module.css'
 import { Link } from 'react-router-dom'
 import { StudentCatalog } from './StudentCatalog'
+import { StudentMentorProfile } from './StudentMentorProfile'
+import type { Mentor as ProfileMentor } from './StudentMentorProfile'
 
 type Mentor = {
   id: number
@@ -103,9 +105,30 @@ export function StudentCabinet() {
 
   const [sentRequests, setSentRequests] = useState<number[]>([])
   const [visibleCount, setVisibleCount] = useState(4)
+  const [selectedMentor, setSelectedMentor] = useState<ProfileMentor | null>(null)
 
   const sendRequest = (id: number) => {
     setSentRequests((current) => (current.includes(id) ? current : [...current, id]))
+  }
+
+  const openMentorProfile = (mentor: Mentor) => {
+    const hoursMatch = mentor.hours.match(/(\d+(?:[.,]\d+)?)\s*ч/)
+    const price = mentor.price === 'Бесплатно' ? 0 : Number(mentor.price.replace(/\D/g, '')) || 0
+
+    setSelectedMentor({
+      id: mentor.id,
+      name: mentor.name,
+      position: mentor.position,
+      experience: mentor.experience,
+      rating: Number(mentor.rating.replace(',', '.')),
+      reviews: 0,
+      match: mentor.match,
+      skills: mentor.skills,
+      hours: hoursMatch ? Number(hoursMatch[1].replace(',', '.')) : 1,
+      schedule: mentor.hours.split('·').slice(1).join('·').trim(),
+      price,
+      freePlaces: true,
+    })
   }
 
   return (
@@ -174,7 +197,14 @@ export function StudentCabinet() {
 
       <main className={styles.main}>
         <header className={styles.topbar}>
-          <h1>{location.pathname === '/student/catalog' ? 'Каталог' : 'Подбор'}</h1>
+          <h1>
+            {selectedMentor
+              ? 'Профиль наставника'
+              : location.pathname === '/student/catalog'
+                ? 'Каталог'
+                : 'Подбор'}
+          </h1>
+
           <div className={styles.userInfo}>
             <button type="button" className={styles.iconButton} aria-label="Уведомления">
               <Bell size={20} />
@@ -183,7 +213,18 @@ export function StudentCabinet() {
           </div>
         </header>
 
-        {location.pathname === '/student/catalog' ? (
+        {selectedMentor ? (
+          <div className={styles.content}>
+            <StudentMentorProfile
+              mentor={selectedMentor}
+              isCompared={false}
+              isSent={sentRequests.includes(selectedMentor.id)}
+              onBack={() => setSelectedMentor(null)}
+              onCompare={() => {}}
+              onRequest={() => sendRequest(selectedMentor.id)}
+            />
+          </div>
+        ) : location.pathname === '/student/catalog' ? (
           <div className={styles.content}>
             <StudentCatalog />
           </div>
@@ -230,6 +271,7 @@ export function StudentCabinet() {
                 <h2>10 наставников под твои цели</h2>
                 <p>Data Science, нейросети · 2 ч в неделю · стажировка за 6 месяцев</p>
               </div>
+
               <div className={styles.headingActions}>
                 <Button variant="secondary" size="md" disabled>
                   Уточнить анкету
@@ -243,13 +285,50 @@ export function StudentCabinet() {
 
             <section className={styles.featured}>
               <div className={styles.featuredAvatar}>
-                <Avatar name="Алексей Миронов" size="l" />
+                <button
+                  type="button"
+                  className={styles.profileLink}
+                  onClick={() =>
+                    openMentorProfile({
+                      id: 100,
+                      name: 'Алексей Миронов',
+                      position: 'Senior Data Scientist',
+                      experience: '7 лет',
+                      rating: '4,9',
+                      match: 99,
+                      skills: ['Data Science', 'Нейросети'],
+                      hours: '2 ч/нед',
+                      price: 'Бесплатно',
+                    })
+                  }
+                >
+                  <Avatar name="Алексей Миронов" size="l" />
+                </button>
               </div>
 
               <div className={styles.featuredInfo}>
                 <Badge variant="match">Лучшее совпадение</Badge>
-                <h2>Алексей Миронов</h2>
+                <button
+                  type="button"
+                  className={styles.profileName}
+                  onClick={() =>
+                    openMentorProfile({
+                      id: 100,
+                      name: 'Алексей Миронов',
+                      position: 'Senior Data Scientist',
+                      experience: '7 лет',
+                      rating: '4,9',
+                      match: 99,
+                      skills: ['Data Science', 'Нейросети'],
+                      hours: '2 ч/нед',
+                      price: 'Бесплатно',
+                    })
+                  }
+                >
+                  <h2>Алексей Миронов</h2>
+                </button>
                 <p>Senior Data Scientist · 7 лет в нейросетях · рейтинг 4,9 · 2 ч в неделю</p>
+
                 <div className={styles.featuredActions}>
                   <Button onClick={() => sendRequest(100)} disabled={sentRequests.includes(100)}>
                     {sentRequests.includes(100) ? (
@@ -260,7 +339,22 @@ export function StudentCabinet() {
                       'Отправить заявку'
                     )}
                   </Button>
-                  <Button variant="secondary" disabled>
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      openMentorProfile({
+                        id: 100,
+                        name: 'Алексей Миронов',
+                        position: 'Senior Data Scientist',
+                        experience: '7 лет',
+                        rating: '4,9',
+                        match: 99,
+                        skills: ['Data Science', 'Нейросети'],
+                        hours: '2 ч/нед',
+                        price: 'Бесплатно',
+                      })
+                    }
+                  >
                     Профиль
                   </Button>
                 </div>
@@ -271,6 +365,7 @@ export function StudentCabinet() {
                   <strong>99%</strong>
                   <span>совместимость</span>
                 </div>
+
                 {[
                   ['Навыки', 96],
                   ['Цели', 92],
@@ -293,13 +388,27 @@ export function StudentCabinet() {
                   <div className={styles.cardVisual}>
                     <Badge variant="match">{mentor.match}% совпадение</Badge>
                     <span>№{index + 2}</span>
-                    <Avatar name={mentor.name} size="l" />
+
+                    <button
+                      type="button"
+                      className={styles.profileLink}
+                      onClick={() => openMentorProfile(mentor)}
+                    >
+                      <Avatar name={mentor.name} size="l" />
+                    </button>
                   </div>
 
                   <div className={styles.mentorName}>
-                    <h3>{mentor.name}</h3>
+                    <button
+                      type="button"
+                      className={styles.profileName}
+                      onClick={() => openMentorProfile(mentor)}
+                    >
+                      {mentor.name}
+                    </button>
                     <span>★ {mentor.rating}</span>
                   </div>
+
                   <p className={styles.position}>
                     {mentor.position} · {mentor.experience}
                   </p>
@@ -327,6 +436,7 @@ export function StudentCabinet() {
                     >
                       {sentRequests.includes(mentor.id) ? 'Заявка отправлена' : 'Отправить заявку'}
                     </Button>
+
                     <button
                       type="button"
                       className={styles.compareButton}
