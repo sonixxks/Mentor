@@ -1,11 +1,10 @@
 import { ChoiceCard } from '../../../components/ui/ChoiceCard'
-import { Slider } from '../../../components/ui/Slider'
+import { Input } from '../../../components/ui/Input'
 import { Textarea } from '../../../components/ui/Textarea'
-import type { StudentAnswers } from '../types'
-import styles from '../Onboarding.module.css'
-import { plural } from '../../../lib/plural'
 import { GOALS } from '../goals'
 import { MAX_MONTHS } from '../types'
+import type { StudentAnswers } from '../types'
+import styles from '../Onboarding.module.css'
 
 const MAX_GOALS = 2
 
@@ -44,14 +43,27 @@ export function GoalsStep({ value, update }: GoalsStepProps) {
         </div>
       </div>
 
-      <Slider
-        label="Срок программы"
-        min={1}
-        max={MAX_MONTHS}
-        value={value.durationMonths}
-        onChange={(durationMonths) => update({ durationMonths })}
-        format={(n) => plural(n, ['месяц', 'месяца', 'месяцев'])}
-      />
+      <div className={styles.field}>
+        <span className={styles.label}>Срок программы, месяцев</span>
+        <div className={styles.grid3}>
+          <Input
+            label="От"
+            type="number"
+            min={1}
+            max={MAX_MONTHS}
+            value={value.durationFrom || ''}
+            onChange={(e) => update({ durationFrom: Number(e.target.value) })}
+          />
+          <Input
+            label="До"
+            type="number"
+            min={1}
+            max={MAX_MONTHS}
+            value={value.durationTo || ''}
+            onChange={(e) => update({ durationTo: Number(e.target.value) })}
+          />
+        </div>
+      </div>
 
       <Textarea
         label="Какой результат будет успехом"

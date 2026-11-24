@@ -1,7 +1,7 @@
 import { ArrowLeft, CheckCircle2, Clock3, Star } from 'lucide-react'
-import { Avatar } from '../../components/ui/Avatar/Avatar'
-import { Button } from '../../components/ui/Button/Button'
-import { Badge } from '../../components/ui/Badge/Badge'
+import { Avatar } from '../../components/ui/Avatar'
+import { Button } from '../../components/ui/Button'
+import { Badge } from '../../components/ui/Badge'
 import styles from './StudentMentorProfile.module.css'
 
 export type Mentor = {

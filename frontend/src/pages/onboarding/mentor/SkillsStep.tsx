@@ -1,10 +1,8 @@
-
-import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { Segmented } from '../../../components/ui/Segmented'
 import { Select } from '../../../components/ui/Select'
 import { Tag } from '../../../components/ui/Tag'
-import { getSkills } from '../../../api/profiles'
+import { useSkills } from '../../../hooks/useSkills'
 import type { MentorAnswers, MentorSkill } from '../types'
 import styles from '../Onboarding.module.css'
 
@@ -29,68 +27,31 @@ type SkillsStepProps = {
 }
 
 export function SkillsStep({ value, update }: SkillsStepProps) {
-  const [availableSkills, setAvailableSkills] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
+  const skillsQuery = useSkills()
+  const availableSkills = skillsQuery.data ?? []
+  const loading = skillsQuery.isPending
+  const loadError = skillsQuery.isError ? 'Не удалось загрузить список навыков' : ''
 
   const { skills, goals } = value
 
-  useEffect(() => {
-    let cancelled = false
-
-    async function loadSkills() {
-      try {
-        const result = await getSkills()
-
-        if (!cancelled) {
-          setAvailableSkills(result)
-          setLoadError('')
-        }
-      } catch {
-        if (!cancelled) {
-          setLoadError('Не удалось загрузить список навыков с сервера')
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
-      }
-    }
-
-    loadSkills()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
   function addSkill(name: string) {
     if (!name || skills.some((skill) => skill.name === name)) return
-
-    update({
-      skills: [...skills, { name, level: 'confident' }],
-    })
+    update({ skills: [...skills, { name, level: 'confident' }] })
   }
 
   function setLevel(name: string, level: MentorSkill['level']) {
     update({
-      skills: skills.map((skill) =>
-        skill.name === name ? { ...skill, level } : skill,
-      ),
+      skills: skills.map((skill) => (skill.name === name ? { ...skill, level } : skill)),
     })
   }
 
   function removeSkill(name: string) {
-    update({
-      skills: skills.filter((skill) => skill.name !== name),
-    })
+    update({ skills: skills.filter((skill) => skill.name !== name) })
   }
 
   function toggleGoal(goal: string) {
     update({
-      goals: goals.includes(goal)
-        ? goals.filter((item) => item !== goal)
-        : [...goals, goal],
+      goals: goals.includes(goal) ? goals.filter((item) => item !== goal) : [...goals, goal],
     })
   }
 
@@ -112,9 +73,7 @@ export function SkillsStep({ value, update }: SkillsStepProps) {
                 <Segmented
                   options={LEVELS}
                   value={skill.level}
-                  onChange={(level) =>
-                    setLevel(skill.name, level as MentorSkill['level'])
-                  }
+                  onChange={(level) => setLevel(skill.name, level as MentorSkill['level'])}
                 />
               </div>
 
@@ -129,23 +88,16 @@ export function SkillsStep({ value, update }: SkillsStepProps) {
             </div>
           ))}
 
-          {loading ? (
-            <p className={styles.hint}>Загружаем список навыков...</p>
-          ) : null}
+          {loading ? <p className={styles.hint}>Загружаем список навыков...</p> : null}
 
-          {loadError ? (
-            <p className={styles.error}>{loadError}</p>
-          ) : null}
+          {loadError ? <p className={styles.error}>{loadError}</p> : null}
 
           {!loading && !loadError && available.length > 0 ? (
             <div className={styles.addSkill}>
               <Select
                 label="Добавить навык"
                 placeholder="Выберите навык"
-                options={available.map((name) => ({
-                  value: name,
-                  label: name,
-                }))}
+                options={available.map((name) => ({ value: name, label: name }))}
                 value=""
                 onChange={(e) => addSkill(e.target.value)}
               />

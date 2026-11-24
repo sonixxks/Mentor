@@ -58,7 +58,7 @@ export type VerificationResponse = {
 }
 
 export function getSkills() {
-  return apiFetch<string[]>('/skills')
+  return apiFetch<string[]>('/skills?limit=100')
 }
 
 export function updateMyProfile(data: UpdateProfileRequest) {

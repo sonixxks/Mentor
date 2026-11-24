@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom'
-import { Button } from '../components/ui/Button/Button'
+import { Button } from '../components/ui/Button'
 import { useSession } from '../hooks/useSession'
 import { roleLabel } from '../lib/auth'
 import { StudentCabinet } from './student/StudentCabinet'

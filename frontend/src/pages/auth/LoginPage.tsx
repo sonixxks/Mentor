@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -6,9 +5,10 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { AuthSplit } from '../../layouts/AuthSplit'
 import { isEmail } from '../../lib/validation'
+import { clearSession, saveSession, updateTokens } from '../../lib/auth'
+import { pathAfterLogin } from '../../lib/afterLogin'
 import { login, getMyAccount } from '../../api/auth'
 import { ApiError } from '../../api/client'
-import { clearSession, saveSession, updateTokens, homeByRole } from '../../lib/auth'
 import styles from './Auth.module.css'
 
 type Errors = { email?: string; password?: string; form?: string }
@@ -59,7 +59,7 @@ export function LoginPage() {
       // Сохраняем сессию вместе с подтверждённой ролью.
       saveSession(tokens.access_token, tokens.refresh_token, account.role)
 
-      navigate(homeByRole[account.role], { replace: true })
+      navigate(await pathAfterLogin(account.role), { replace: true })
     } catch (error) {
       clearSession()
 
@@ -137,11 +137,7 @@ export function LoginPage() {
         </Button>
       </form>
 
-      <span className={styles.divider}>или</span>
-      {/* TODO: вход через Яндекс ID */}
-      <Button variant="secondary" size="lg" fullWidth>
-        Войти через Яндекс ID
-      </Button>
+      {/* TODO: вход через Яндекс ID (POST /auth/yandex) */}
 
       <p className={styles.note}>
         Аккаунты кураторов создаёт администратор. Если вы куратор, используйте выданные данные для

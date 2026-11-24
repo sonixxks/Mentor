@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Check, Clock, Search, Star, X } from 'lucide-react'
-import { Avatar } from '../../components/ui/Avatar/Avatar'
+import { Avatar } from '../../components/ui/Avatar'
 import styles from './StudentCatalog.module.css'
-import { Input } from '../../components/ui/Input/Input'
-import { Select } from '../../components/ui/Select/Select'
-import { Slider } from '../../components/ui/Slider/Slider'
+import { Input } from '../../components/ui/Input'
+import { Select } from '../../components/ui/Select'
+import { Slider } from '../../components/ui/Slider'
 import { StudentMentorProfile } from './StudentMentorProfile'
 
 type Mentor = {

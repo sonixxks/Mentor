@@ -64,13 +64,24 @@ export function AboutStep({ value, update, documents, onDocumentsChange }: About
           value={value.position}
           onChange={(e) => update({ position: e.target.value })}
         />
-        <Input
-          label="Компания"
-          placeholder="Необязательно"
-          value={value.company}
-          onChange={(e) => update({ company: e.target.value })}
-        />
+        {value.selfEmployed ? null : (
+          <Input
+            label="Компания"
+            placeholder="Необязательно"
+            value={value.company}
+            onChange={(e) => update({ company: e.target.value })}
+          />
+        )}
       </div>
+
+      <label className={styles.check}>
+        <input
+          type="checkbox"
+          checked={value.selfEmployed}
+          onChange={(e) => update({ selfEmployed: e.target.checked, company: '' })}
+        />
+        <span className={styles.checkTitle}>Работаю самостоятельно (фриланс, самозанятость)</span>
+      </label>
 
       <div className={styles.field}>
         <span className={styles.label}>Опыт работы в сфере</span>
@@ -84,7 +95,7 @@ export function AboutStep({ value, update, documents, onDocumentsChange }: About
       <Textarea
         label="Коротко о себе"
         placeholder="Например, помогаю начинающим ML-инженерам собрать первый проект и пройти собеседования"
-        maxLength={500}
+        maxLength={300}
         value={value.about}
         onChange={(e) => update({ about: e.target.value })}
       />

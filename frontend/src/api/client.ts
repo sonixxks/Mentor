@@ -16,9 +16,8 @@ export class ApiError extends Error {
 
 type ApiErrorBody = {
   message?: string
-  detail?: string
-  code?: string
-  error?: string
+  error_code?: string
+  details?: string[]
 }
 
 type TokenResponse = {
@@ -44,7 +43,7 @@ function isPublicAuthPath(path: string): boolean {
 }
 
 function getErrorMessage(body: ApiErrorBody | null): string {
-  return body?.message || body?.detail || body?.error || 'Не удалось выполнить запрос'
+  return body?.message || 'Не удалось выполнить запрос'
 }
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -136,7 +135,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = responseBody as ApiErrorBody | null
 
-    throw new ApiError(response.status, getErrorMessage(body), body?.code)
+    throw new ApiError(response.status, getErrorMessage(body), body?.error_code)
   }
 
   return responseBody as T
