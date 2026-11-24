@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { homeByRole } from '../../../lib/auth'
-import { ApiError } from '../../../api/client'
+import { getSubmitErrorMessage } from '../errorMessage'
 import { addVerificationAssets, updateMyProfile } from '../../../api/profiles'
 import { OnboardingShell } from '../OnboardingShell'
 import { STEPS } from '../steps'
@@ -68,24 +68,6 @@ function validate(step: number, a: MentorAnswers, documents: File[]) {
   return ''
 }
 
-function getApiErrorMessage(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.status === 400) {
-      return `Сервер не принял данные анкеты: ${error.message}`
-    }
-
-    if (error.status === 401) {
-      return 'Сессия истекла. Войдите в аккаунт заново.'
-    }
-
-    if (error.status === 0) {
-      return error.message
-    }
-  }
-
-  return error instanceof Error ? error.message : 'Не удалось отправить анкету. Попробуйте ещё раз.'
-}
-
 export function MentorOnboarding({ step }: { step: number }) {
   const navigate = useNavigate()
   const draft = useDraft('onboarding-mentor', initialMentor)
@@ -141,7 +123,7 @@ export function MentorOnboarding({ step }: { step: number }) {
       draft.clear()
       navigate(homeByRole.mentor)
     } catch (submitError) {
-      setError(getApiErrorMessage(submitError))
+      setError(getSubmitErrorMessage(submitError))
     } finally {
       setIsSubmitting(false)
     }

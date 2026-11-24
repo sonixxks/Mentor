@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { homeByRole, saveSession } from '../../../lib/auth'
+import { updateMyProfile } from '../../../api/profiles'
+import type { UpdateProfileRequest } from '../../../api/profiles'
+import { homeByRole } from '../../../lib/auth'
+import { getSubmitErrorMessage } from '../errorMessage'
 import { OnboardingShell } from '../OnboardingShell'
 import { STEPS } from '../steps'
 import { MAX_MONTHS, initialStudent } from '../types'
 import type { StudentAnswers } from '../types'
 import { useDraft } from '../useDraft'
 import { AboutStep } from './AboutStep'
-import styles from '../Onboarding.module.css'
-import { SkillsStep } from './SkillsStep'
 import { GoalsStep } from './GoalsStep'
+import { SkillsStep } from './SkillsStep'
 import { TimeStep } from './TimeStep'
+import styles from '../Onboarding.module.css'
 
 function validate(step: number, a: StudentAnswers) {
   if (step === 1) {
@@ -54,10 +57,41 @@ function validate(step: number, a: StudentAnswers) {
   return ''
 }
 
+/** Ответы анкеты → тело запроса PATCH /profiles/me */
+function toProfile(a: StudentAnswers): UpdateProfileRequest {
+  const studies = a.status === 'student' || a.status === 'graduate'
+  const works = a.status === 'junior' || a.status === 'switcher'
+
+  return {
+    first_name: a.firstName.trim(),
+    last_name: a.lastName.trim(),
+    middle_name: a.middleName.trim() || undefined,
+    age: Number(a.age),
+    current_status: a.status as UpdateProfileRequest['current_status'],
+    university: studies ? a.university.trim() : undefined,
+    major: studies ? a.direction.trim() : undefined,
+    course: a.status === 'student' ? Number(a.course) : undefined,
+    job_title: works ? a.position.trim() : undefined,
+    company: works ? a.company.trim() || null : undefined,
+    experience: a.experience,
+    target_skills: a.targetSkills,
+    current_skills: a.currentSkills.map((skill) => ({ skill: skill.name, level: skill.level })),
+    main_goals: a.goals,
+    min_duration_months: a.durationFrom,
+    max_duration_months: a.durationTo,
+    success_metric: a.success.trim() || undefined,
+    time_limit: a.hoursPerWeek,
+    availability_slots: a.schedule,
+    communication_style: a.style as UpdateProfileRequest['communication_style'],
+    onboarding_completed: true,
+  }
+}
+
 export function StudentOnboarding({ step }: { step: number }) {
   const navigate = useNavigate()
   const draft = useDraft('onboarding-student', initialStudent)
   const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const steps = STEPS.student
   const isLast = step === steps.length
 
@@ -66,7 +100,9 @@ export function StudentOnboarding({ step }: { step: number }) {
     navigate(`/onboarding/student/${step - 1}`)
   }
 
-  function next() {
+  async function next() {
+    if (isSubmitting) return
+
     const message = validate(step, draft.value)
     setError(message)
     if (message) return
@@ -75,10 +111,17 @@ export function StudentOnboarding({ step }: { step: number }) {
       navigate(`/onboarding/student/${step + 1}`)
       return
     }
-    // TODO: POST /api/onboarding/student — отправить draft.value
-    draft.clear()
-    saveSession('dev-token', 'student')
-    navigate(homeByRole.student)
+
+    setIsSubmitting(true)
+    try {
+      await updateMyProfile(toProfile(draft.value))
+      draft.clear()
+      navigate(homeByRole.student)
+    } catch (submitError) {
+      setError(getSubmitErrorMessage(submitError))
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -88,7 +131,7 @@ export function StudentOnboarding({ step }: { step: number }) {
       current={step}
       onBack={step > 1 ? back : undefined}
       onNext={next}
-      nextLabel={isLast ? 'Подобрать наставников' : 'Далее'}
+      nextLabel={isSubmitting ? 'Отправляем...' : isLast ? 'Подобрать наставников' : 'Далее'}
       onExit={() => navigate('/login')}
     >
       {step === 1 ? <AboutStep value={draft.value} update={draft.update} /> : null}
