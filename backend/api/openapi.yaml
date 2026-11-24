@@ -1,0 +1,3905 @@
+openapi: 3.0.3
+info:
+  title: Curator MVP API
+  description: |-
+    API спецификация платформы менторства «Куратор».
+
+    **Матрица переходов заявок (State Machine):**
+
+    * Ученик: `pending` -> `cancelled`; `approved_by_mentor` -> `accepted`.
+
+    * Наставник: `pending` -> `approved_by_mentor` / `rejected_by_mentor`.
+
+    * Куратор: любой нетерминальный статус -> `rejected_by_curator` (с причиной). Резерв: экрана в MVP нет, но право в API сохранено.
+
+
+    **Коды подтверждения (OTP):** хранятся в Redis, не в PostgreSQL. Срок жизни 10 минут, максимум 3 попытки ввода, повторная отправка не чаще раза в 60 секунд. Данные незавершённой регистрации также хранятся в Redis до подтверждения почты.
+
+
+    **Токены:** access-токен (JWT) живёт 15 минут. Refresh-токены хранятся в Redis (в виде хэша), не в PostgreSQL: срок жизни задаётся TTL, 30 дней при `remember_me = true` и 24 часа без него. Выход и смена или сброс пароля отзывают refresh-токены пользователя; при перезапуске Redis без сохранения данных пользователям придётся войти заново.
+
+
+    **Время:** платформа работает в одном часовом поясе — Екатеринбург (`Asia/Yekaterinburg`, UTC+5), на экранах пометка «время по Екатеринбургу». Моменты времени (`date-time`) передаются в формате ISO 8601 с указанием смещения и хранятся в UTC, слоты `availability_slots` задаются в екатеринбургском времени.
+
+
+    **Аккаунты:** куратора создаёт администратор через API (`POST /admin/curators`): на почту уходит приглашение со ссылкой на 48 часов, пароль задаётся по ссылке. Аккаунты администраторов заводятся вне API.
+
+
+    **Приватность:** до создания пары наставник видит у ученика только имя, интересы и условия (`target_skills`, `main_goals`, `time_limit`, срок, `communication_style`), процент совместимости и сопроводительное письмо. Фамилия, фото, возраст, курс и специальность открываются (фамилия и фото) только после создания воркспейса.
+
+
+    **Верификация наставников:** наставник прикладывает документы и ссылки, куратор проверяет их вручную за пределами системы и ставит итоговый статус (`verified` / `rejected`). Причина отказа в профиле не хранится: комментарий куратора уходит наставнику уведомлением. Если после верификации (или отказа) наставник добавляет новый материал, статус возвращается в `pending`, и до повторной проверки он не виден в каталоге (текущие пары продолжают работу). В каталоге видны только наставники со статусом `verified` и `is_published = true`.
+
+
+    **Слоты наставника:** воркспейс в статусе `active`, `paused` или `stagnation` занимает место; `completed` освобождает. `free_slots = max_students` минус занятые места.
+
+
+    **Вне scope MVP:** платежи, видеозапись встреч, чат с куратором и чат-бот (раздел FAQ статический, на фронтенде), мероприятия, подписка на календарь (.ics), совместное редактирование заметок в реальном времени, статус «в сети», шаблоны задач у программ, блокировка и удаление пользователей, аналитика и настройки админа.
+  version: 1.2.0
+servers:
+- url: https://api.curator.ru/api/v1
+  description: Основной сервер
+security:
+- BearerAuth: []
+tags:
+- name: Auth
+- name: Account
+- name: Profiles
+- name: Catalog
+- name: Recommendations
+- name: Requests
+- name: Workspaces
+- name: Calendar
+- name: Notifications
+- name: Curator
+- name: Admin
+- name: FAQ
+paths:
+  /auth/register:
+    post:
+      tags:
+      - Auth
+      summary: Шаг 1. Регистрация (отправка кода на почту)
+      operationId: registerUser
+      description: Аккаунт в БД создаётся только после подтверждения почты (`/auth/verify-email`).
+      security: &id001 []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Код отправлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /auth/verify-email:
+    post:
+      tags:
+      - Auth
+      summary: Шаг 2. Подтверждение почты
+      operationId: verifyEmail
+      description: Создаёт аккаунт и пустой профиль, возвращает токены (пользователь сразу переходит к анкете).
+      security: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - code
+              properties:
+                email:
+                  type: string
+                  format: email
+                code:
+                  type: string
+                  pattern: ^\d{6}$
+      responses:
+        '201':
+          description: Аккаунт создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/resend-code:
+    post:
+      tags:
+      - Auth
+      summary: Переотправить код подтверждения почты
+      operationId: resendCode
+      security: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Код отправлен повторно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSentResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Вход
+      operationId: loginUser
+      security: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Успешный вход
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/yandex:
+    post:
+      tags:
+      - Auth
+      summary: Вход / регистрация через Яндекс ID
+      operationId: loginWithYandex
+      description: 'Фронтенд получает от Яндекса `code` и передаёт его сюда. Бэкенд обменивает код на данные пользователя и ищет аккаунт по `yandex_id`,
+        затем по email (почта от Яндекса считается подтверждённой). Если аккаунта нет, он создаётся: для этого обязательны `role` и `terms_accepted`,
+        иначе возвращается 409 с кодом `ROLE_REQUIRED`. У такого аккаунта нет пароля (его можно задать через сброс пароля).'
+      security: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - code
+              - redirect_uri
+              properties:
+                code:
+                  type: string
+                redirect_uri:
+                  type: string
+                  format: uri
+                role:
+                  type: string
+                  enum:
+                  - student
+                  - mentor
+                  description: Обязателен при первом входе
+                terms_accepted:
+                  type: boolean
+                  description: Обязательно `true` при создании нового аккаунта
+      responses:
+        '200':
+          description: Вход в существующий аккаунт
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '201':
+          description: Новый аккаунт создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /auth/password/forgot:
+    post:
+      tags:
+      - Auth
+      summary: Восстановление пароля. Шаг 1. Отправить код
+      operationId: forgotPassword
+      description: Всегда отвечает 200, даже если такой почты нет (чтобы не раскрывать список аккаунтов).
+      security: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Если аккаунт существует, код отправлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSentResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/password/verify-code:
+    post:
+      tags:
+      - Auth
+      summary: Восстановление пароля. Проверить код
+      operationId: verifyResetCode
+      description: 'Проверяет код до ввода нового пароля, чтобы ошибка показывалась на своём шаге. Код при успехе остаётся действительным и повторно
+        передаётся в `/auth/password/reset`. Неверный код: 400 `INVALID_CODE` и одна из трёх попыток потрачена; после трёх неудач код сгорает.'
+      security: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - code
+              properties:
+                email:
+                  type: string
+                  format: email
+                code:
+                  type: string
+                  pattern: ^\d{6}$
+      responses:
+        '204':
+          description: Код верный
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/password/reset:
+    post:
+      tags:
+      - Auth
+      summary: Восстановление пароля. Шаг 2. Новый пароль
+      operationId: resetPassword
+      description: После успешной смены пароля пользователь сразу входит (возвращаются токены). Обновляет `password_changed_at`.
+      security: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - code
+              - new_password
+              properties:
+                email:
+                  type: string
+                  format: email
+                code:
+                  type: string
+                  pattern: ^\d{6}$
+                new_password:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Пароль изменён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/refresh:
+    post:
+      tags:
+      - Auth
+      summary: Обновление токена
+      operationId: refreshToken
+      description: 'Refresh-токен одноразовый: при обновлении старый отзывается в Redis, выдаётся новая пара токенов. Отозванный или просроченный
+        токен: 401.'
+      security: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Новые токены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/me:
+    get:
+      tags:
+      - Account
+      summary: Данные аккаунта
+      operationId: getMyAccount
+      description: 'Настройки аккаунта: почта, способ входа, давность смены пароля.'
+      responses:
+        '200':
+          description: Аккаунт
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserMeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/me/email/change-request:
+    post:
+      tags:
+      - Account
+      summary: Смена почты. Шаг 1. Отправить код на новую почту
+      operationId: requestEmailChange
+      description: Если у аккаунта есть пароль, он обязателен. 409, если новая почта уже занята.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - new_email
+              properties:
+                new_email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Код отправлен на новую почту
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /users/me/email/confirm:
+    post:
+      tags:
+      - Account
+      summary: Смена почты. Шаг 2. Подтвердить кодом
+      operationId: confirmEmailChange
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - new_email
+              - code
+              properties:
+                new_email:
+                  type: string
+                  format: email
+                code:
+                  type: string
+                  pattern: ^\d{6}$
+      responses:
+        '200':
+          description: Почта изменена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserMeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /users/me/password:
+    post:
+      tags:
+      - Account
+      summary: Сменить пароль
+      operationId: changePassword
+      description: '`current_password` обязателен, если у аккаунта уже есть пароль (аккаунт Яндекса без пароля может задать его впервые). Обновляет
+        `password_changed_at`.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - new_password
+              properties:
+                current_password:
+                  type: string
+                new_password:
+                  type: string
+                  minLength: 8
+      responses:
+        '204':
+          description: Пароль изменён
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /profiles/me:
+    get:
+      tags:
+      - Profiles
+      summary: Получить свой профиль
+      operationId: getMyProfile
+      responses:
+        '200':
+          description: Мой профиль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      tags:
+      - Profiles
+      summary: Частичное обновление профиля (анкета, настройки, уведомления)
+      operationId: updateMyProfile
+      description: |-
+        Обновляются только переданные поля, поэтому анкету можно сохранять по шагам («Сохранить и выйти»). Последним шагом клиент отправляет `onboarding_completed: true`: сервер проверяет, что обязательные для роли поля заполнены, иначе возвращает 400 с перечнем незаполненных полей в `details`.
+
+        **Обязательные поля при завершении анкеты.** Ученик: `age`, `current_status`, `main_goals`, `target_skills`, `time_limit`, `availability_slots`, `communication_style`. Наставник: `job_title`, `experience`, `bio`, `current_skills` (уровни 2–3), `help_topics`, `target_student_levels`, `hourly_rate`, `time_limit`, `max_students`, `availability_slots`, `communication_style`.
+
+        Навыки (`current_skills`, `target_skills`) должны быть из словаря (`GET /skills`). Уровни навыков: ученик 1–3, наставник только 2–3.
+
+        Наставник попадает в очередь верификации (`verification_status = pending`) в момент первой публикации (`is_published: true`), если загружен хотя бы один документ или ссылка. Пока статус не `verified`, наставник не виден в каталоге. Программы (пакеты услуг) редактируются отдельно: `/profiles/me/packages`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Профиль обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /profiles/me/avatar:
+    post:
+      tags:
+      - Profiles
+      summary: Загрузить фото профиля
+      operationId: uploadAvatar
+      description: JPG или PNG до 5 МБ.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Фото обновлено
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - avatar_url
+                properties:
+                  avatar_url:
+                    type: string
+                    format: uri
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /profiles/me/verification-assets:
+    post:
+      tags:
+      - Profiles
+      summary: Добавить документы и ссылки для верификации (наставник)
+      operationId: addVerificationAssets
+      description: Только для роли `mentor`. Можно передать файлы (`files`), ссылки (`links`) или и то и другое, всего не более 10 материалов
+        в профиле. Если статус был `verified` или `rejected`, добавление материала переводит его в `pending` (повторная проверка), а наставник
+        скрывается из каталога до решения куратора. Если статус `none`, он станет `pending` при первой публикации профиля.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  maxItems: 5
+                  items:
+                    type: string
+                    format: binary
+                links:
+                  type: array
+                  maxItems: 5
+                  items:
+                    type: string
+                    format: uri
+      responses:
+        '200':
+          description: Материалы добавлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /profiles/me/verification-assets/{assetId}:
+    delete:
+      tags:
+      - Profiles
+      summary: Удалить материал верификации
+      operationId: deleteVerificationAsset
+      parameters:
+      - name: assetId
+        in: path
+        required: true
+        schema: &id002
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Материал удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /profiles/me/packages:
+    get:
+      tags:
+      - Profiles
+      summary: Мои программы
+      operationId: getMyPackages
+      description: Только для роли `mentor`. В каждой программе `pairs_count` — число пар по ней.
+      responses:
+        '200':
+          description: Программы наставника (кроме `archived`)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ServicePackage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Profiles
+      summary: Создать программу
+      operationId: createPackage
+      description: 'Создаётся в статусе `draft` (ученикам не видна). Чтобы опубликовать (`status: published`), нужны `title`, `price` (0 = бесплатно)
+        и `session_count`, иначе 400 с перечнем полей в `details`.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePackageRequest'
+      responses:
+        '201':
+          description: Программа создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicePackage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /packages/{id}:
+    patch:
+      tags:
+      - Profiles
+      summary: Изменить программу, опубликовать или снять с публикации
+      operationId: updatePackage
+      description: 'Частичное обновление. `status: published` публикует программу, `status: draft` снимает с публикации. Уже созданные заявки
+        и пары не затрагиваются.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePackageRequest'
+      responses:
+        '200':
+          description: Программа обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicePackage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Profiles
+      summary: Удалить программу
+      operationId: deletePackage
+      description: 'Мягкое удаление: `status = archived`, так как на программу ссылаются заявки. Текущие пары не затрагиваются.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '204':
+          description: Программа удалена
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /skills:
+    get:
+      tags:
+      - Catalog
+      summary: Словарь навыков (поиск и популярные)
+      operationId: getSkills
+      description: Единый словарь навыков для анкет учеников, анкет наставников, программ и фильтров каталога. Темы помощи (`help_topics`, например
+        «Собеседования») в словарь не входят.
+      security: *id001
+      parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+        description: Поиск по подстроке
+      - name: popular
+        in: query
+        schema:
+          type: boolean
+        description: Только популярные (для подсказок-чипов)
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+          maximum: 100
+      responses:
+        '200':
+          description: Список названий навыков
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /mentors:
+    get:
+      tags:
+      - Catalog
+      summary: Каталог наставников
+      operationId: getMentors
+      description: Только наставники с `verification_status = verified` и `is_published = true`. Для авторизованного ученика с заполненной анкетой
+        в каждой карточке есть `match`; без авторизации `match` отсутствует, а сортировка `match` недоступна (используется `rating`). Наставники,
+        у которых нет свободных мест, остаются в каталоге с `free_slots = 0` (на фронте «мест нет»). Сравнение наставников (до 3) делает клиент
+        по данным карточек.
+      security: &id003
+      - {}
+      - BearerAuth: []
+      parameters:
+      - &id004
+        name: page
+        in: query
+        schema:
+          type: integer
+          default: 1
+          minimum: 1
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 10
+          maximum: 50
+      - name: q
+        in: query
+        schema:
+          type: string
+        description: Поиск по навыку, имени или компании
+      - name: skills
+        in: query
+        schema:
+          type: string
+        description: Названия навыков из словаря через запятую
+      - name: sort
+        in: query
+        schema:
+          type: string
+          enum:
+          - match
+          - rating
+          - price_asc
+          - price_desc
+          - experience
+          default: match
+      - name: price_min
+        in: query
+        schema:
+          type: number
+          minimum: 0
+        description: Цена за час, от
+      - name: price_max
+        in: query
+        schema:
+          type: number
+          minimum: 0
+        description: Цена за час, до
+      - name: hours_min
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 10
+        description: Часов в неделю у наставника, от
+      - name: hours_max
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 10
+        description: Часов в неделю у наставника, до
+      - name: min_match
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 100
+        description: Минимальная совместимость, %
+      - name: min_rating
+        in: query
+        schema:
+          type: number
+          minimum: 0
+          maximum: 5
+      - name: has_free_slots
+        in: query
+        schema:
+          type: boolean
+        description: Только с свободными местами
+      responses:
+        '200':
+          description: Страница с наставниками
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MentorPageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /mentors/recommendations:
+    get:
+      tags:
+      - Recommendations
+      summary: Умный подбор (Top-10)
+      operationId: getMentorRecommendations
+      description: |-
+        Сравнивает анкету ученика с анкетами наставников. Веса критериев: навыки 50%, цели 20%, время 20%, стиль общения 10%. В выдачу попадают только наставники с совпадением от 60% и свободными местами, не более 10, по убыванию совпадения. Если таких нет, возвращается пустой массив. Если анкета ученика не заполнена (`onboarding_completed = false`), возвращается 409 с кодом `PROFILE_INCOMPLETE`.
+
+        **Расчёт критериев (для бэкенда).** Навыки: доля `target_skills` ученика среди `current_skills` наставника; уровень ученика (среднее по его `current_skills`: до 1,5 — `beginner`, до 2,5 — `has_basics`, иначе `advanced`) должен входить в `target_student_levels` наставника, иначе критерий умножается на 0,5. Цели: доля `main_goals` ученика, для которых есть соответствие в `help_topics` наставника (`find_job_or_internship` → `first_job_in_it`, `interview_prep`, `portfolio`; `learn_new_skill` → `code_review`, `career_growth`; `build_project` → `portfolio`, `code_review`; `interview_prep` → `interview_prep`; `change_direction` → `change_direction`, `career_growth`; `develop_soft_skills` → `soft_skills`). Время: доля слотов ученика (`availability_slots`), совпадающих со слотами наставника, с учётом `time_limit`. Стиль: 100 при совпадении `communication_style`, 50 если у одной из сторон `free`, иначе 0.
+      responses:
+        '200':
+          description: Топ совпадений (может быть пустым)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                  - $ref: '#/components/schemas/MentorSummary'
+                  - type: object
+                    required:
+                    - match
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /mentors/me/stats:
+    get:
+      tags:
+      - Catalog
+      summary: Статистика наставника (дашборд)
+      operationId: getMyMentorStats
+      description: Для плиток дашборда и шапки «Свободно мест». Остальные блоки дашборда собираются из `/calendar`, `/requests/my`, `/workspaces`
+        и `/mentors/{id}/reviews`.
+      responses:
+        '200':
+          description: Показатели
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MentorStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /mentors/{id}:
+    get:
+      tags:
+      - Catalog
+      summary: Карточка наставника
+      operationId: getMentorById
+      description: В `service_packages` попадают только опубликованные программы (`status = published`). Владелец видит свою карточку, даже если
+        она скрыта или не верифицирована (кнопка «Как видят ученики»).
+      security: *id003
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: Детали наставника
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MentorDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /mentors/{id}/reviews:
+    get:
+      tags:
+      - Catalog
+      summary: Отзывы об наставнике
+      operationId: getMentorReviews
+      description: Публичные отзывы учеников о встречах (оценки наставника куратору не отдаются). Для своих отзывов наставник использует тот же
+        запрос со своим `id`.
+      security: *id001
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      - *id004
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 10
+          maximum: 50
+      responses:
+        '200':
+          description: Страница отзывов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewPageResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /requests:
+    post:
+      tags:
+      - Requests
+      summary: Создать заявку
+      operationId: createRequest
+      description: 'Без `service_package_id` это открытый запрос, с ним заявка на авторскую программу. Ученик может иметь не более 3 активных
+        заявок (`pending`, `approved_by_mentor`): иначе 409 `REQUEST_LIMIT_REACHED`. Вторая активная заявка к тому же наставнику: 409 `DUPLICATE_REQUEST`.
+        Наставник не должен быть заполнен до лимита `max_students`.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRequestPayload'
+      responses:
+        '201':
+          description: Заявка создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /requests/my:
+    get:
+      tags:
+      - Requests
+      summary: Мои заявки
+      operationId: getMyRequests
+      description: Для ученика заявки, которые он отправил; для наставника заявки, адресованные ему.
+      parameters:
+      - *id004
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 10
+          maximum: 50
+      - name: group
+        in: query
+        schema:
+          type: string
+          enum:
+          - active
+          - archive
+        description: '`active` = `pending` и `approved_by_mentor`; `archive` = `accepted`, `rejected_by_mentor`, `rejected_by_curator`, `cancelled`.
+          Без параметра возвращаются все.'
+      responses:
+        '200':
+          description: Страница заявок
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestPageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /requests/{id}/status:
+    patch:
+      tags:
+      - Requests
+      summary: Сменить статус заявки
+      operationId: changeRequestStatus
+      description: |-
+        Допустимые переходы по ролям описаны в матрице в начале документа. `rejection_reason` обязателен для `rejected_by_curator` и необязателен для `rejected_by_mentor`.
+
+        При переходе в `accepted`, в одной транзакции с блокировкой: проверяется лимит `max_students` наставника (иначе 409 `MENTOR_LIMIT_REACHED`), создаётся воркспейс (с постоянной ссылкой на видеовстречи пары), остальные активные заявки ученика автоматически переходят в `cancelled`, у ученика сбрасывается `needs_curator_help`. После этого партнёрам открываются фамилия и фото друг друга.
+
+        Недопустимый переход: 409 `INVALID_TRANSITION`.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestStatusUpdate'
+      responses:
+        '200':
+          description: Статус обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /workspaces:
+    get:
+      tags:
+      - Workspaces
+      summary: Мои рабочие пространства
+      operationId: getMyWorkspaces
+      parameters:
+      - *id004
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 10
+          maximum: 50
+      responses:
+        '200':
+          description: Страница воркспейсов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspacePageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /workspaces/{id}:
+    get:
+      tags:
+      - Workspaces
+      summary: Дашборд воркспейса
+      operationId: getWorkspaceById
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: Полная информация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /workspaces/{id}/meetings:
+    get:
+      tags:
+      - Workspaces
+      summary: Список встреч
+      operationId: getMeetings
+      description: В каждой встрече `my_review_rating` — оценка текущего пользователя (null, если он ещё не оценил).
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: Массив встреч
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MeetingResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Workspaces
+      summary: Назначить встречу
+      operationId: createMeeting
+      description: Встреча проходит по постоянной ссылке пары (`WorkspaceDetailResponse.jitsi_link`). Партнёр получает уведомление `meeting_update`.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMeetingRequest'
+      responses:
+        '201':
+          description: Встреча создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /meetings/{meetingId}:
+    patch:
+      tags:
+      - Workspaces
+      summary: Перенести встречу
+      operationId: updateMeeting
+      description: Любой из пары меняет время сам, без согласования; второй участник получает уведомление `meeting_update`.
+      parameters:
+      - name: meetingId
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeetingRequest'
+      responses:
+        '200':
+          description: Встреча обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /workspaces/{id}/tasks:
+    get:
+      tags:
+      - Workspaces
+      summary: Дорожная карта (задачи)
+      operationId: getTasks
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: Задачи
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Workspaces
+      summary: Создать задачу
+      operationId: createTask
+      description: Создаёт наставник пары, у ученика 403.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Задача добавлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tasks/{taskId}:
+    patch:
+      tags:
+      - Workspaces
+      summary: Изменить задачу
+      operationId: updateTask
+      description: Название, описание и дедлайн меняет наставник пары. Статус меняется отдельным запросом.
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: Задача обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Workspaces
+      summary: Удалить задачу
+      operationId: deleteTask
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '204':
+          description: Задача удалена
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tasks/{taskId}/status:
+    patch:
+      tags:
+      - Workspaces
+      summary: Движение задачи
+      operationId: changeTaskStatus
+      description: 'Ученик: `todo` → `in_progress`; `in_progress` / `needs_revision` → `on_review` (можно передать `artifacts_url`). Наставник:
+        `on_review` → `completed` / `needs_revision` (можно передать `mentor_comment`). Иначе 409 `INVALID_TRANSITION`. Наставник получает уведомление
+        `task_review` при переходе в `on_review`, ученик при решении наставника.'
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                  - in_progress
+                  - on_review
+                  - needs_revision
+                  - completed
+                artifacts_url:
+                  type: string
+                  format: uri
+                mentor_comment:
+                  type: string
+      responses:
+        '200':
+          description: Обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /tasks/{taskId}/comments:
+    get:
+      tags:
+      - Workspaces
+      summary: Комментарии к задаче
+      operationId: getTaskComments
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: Комментарии по возрастанию времени
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskCommentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+      - Workspaces
+      summary: Добавить комментарий к задаче
+      operationId: createTaskComment
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - text
+              properties:
+                text:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+      responses:
+        '201':
+          description: Комментарий добавлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCommentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /workspaces/{id}/notes:
+    get:
+      tags:
+      - Workspaces
+      summary: История заметок
+      operationId: getNotes
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: Список заметок
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MeetingNoteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Workspaces
+      summary: Добавить заметку
+      operationId: createNote
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMeetingNoteRequest'
+      responses:
+        '201':
+          description: Заметка создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingNoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /notes/{noteId}:
+    patch:
+      tags:
+      - Workspaces
+      summary: Изменить заметку (автосохранение)
+      operationId: updateNote
+      description: 'Общий markdown-редактор для пары. Одновременного редактирования в реальном времени нет: побеждает последнее сохранение.'
+      parameters:
+      - name: noteId
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeetingNoteRequest'
+      responses:
+        '200':
+          description: Заметка обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingNoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Workspaces
+      summary: Удалить заметку
+      operationId: deleteNote
+      parameters:
+      - name: noteId
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '204':
+          description: Заметка удалена
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /workspaces/{id}/messages:
+    get:
+      tags:
+      - Workspaces
+      summary: История чата
+      operationId: getWorkspaceMessages
+      description: Чат только внутри пары. Выдача постраничная назад по времени.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      - name: before
+        in: query
+        schema: &id011
+          type: string
+          format: date-time
+        description: Сообщения старше этого момента
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+          maximum: 100
+      responses:
+        '200':
+          description: Сообщения по возрастанию времени
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Workspaces
+      summary: Отправить сообщение
+      operationId: sendMessage
+      description: Нужно передать `text`, `file_id` или оба. Файл сначала загружается через `POST /workspaces/{id}/files`.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '201':
+          description: Отправлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /workspaces/{id}/messages/read:
+    post:
+      tags:
+      - Workspaces
+      summary: Отметить сообщения партнёра прочитанными
+      operationId: markMessagesRead
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '204':
+          description: Отмечено
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /workspaces/{id}/files:
+    get:
+      tags:
+      - Workspaces
+      summary: База знаний (файлы и ссылки)
+      operationId: getWorkspaceFiles
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: Материалы
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Workspaces
+      summary: Загрузить файл
+      operationId: uploadFile
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Файл загружен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /workspaces/{id}/links:
+    post:
+      tags:
+      - Workspaces
+      summary: Добавить ссылку в базу знаний
+      operationId: addWorkspaceLink
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - title
+              - url
+              properties:
+                title:
+                  type: string
+                  maxLength: 200
+                url:
+                  type: string
+                  format: uri
+      responses:
+        '201':
+          description: Ссылка добавлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /meetings/{meetingId}/reviews:
+    post:
+      tags:
+      - Workspaces
+      summary: Оценить встречу
+      operationId: createMeetingReview
+      description: 'Оценку ставит каждый участник пары после начала встречи, одну на встречу (повтор: 409 `REVIEW_EXISTS`). Адресат (`target_id`)
+        определяется автоматически. Оценка ученика публичная: попадает в карточку наставника (имя ученика, дата встречи) и в `rating_avg` / `reviews_count`.
+        Оценка наставника видна только куратору. Низкая последняя оценка (2 и ниже) от любой стороны дает сигнал `bad_reviews`.'
+      parameters:
+      - name: meetingId
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - rating
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '201':
+          description: Оценка сохранена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /calendar:
+    get:
+      tags:
+      - Calendar
+      summary: Календарь (встречи, дедлайны, свободные слоты партнёров)
+      operationId: getCalendar
+      description: Агрегирует все воркспейсы пользователя. Период не более 62 дней.
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: События периода
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /notifications:
+    get:
+      tags:
+      - Notifications
+      summary: Мои уведомления
+      operationId: getMyNotifications
+      description: 'Соответствие категорий и типов: `requests` = `request_update`; `tasks` = `task_review`, `meeting_update`; `messages` = `new_message`.
+        `new_recommendations` и `system_alert` попадают только в общий список (без `category`).'
+      parameters:
+      - *id004
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+          maximum: 100
+      - name: category
+        in: query
+        schema:
+          type: string
+          enum:
+          - requests
+          - tasks
+          - messages
+      - name: unread_only
+        in: query
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Страница уведомлений
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /notifications/unread-count:
+    get:
+      tags:
+      - Notifications
+      summary: Счётчики непрочитанных
+      operationId: getUnreadCounts
+      responses:
+        '200':
+          description: Счётчики
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnreadCounts'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /notifications/read-all:
+    patch:
+      tags:
+      - Notifications
+      summary: Отметить все прочитанными
+      operationId: markAllNotificationsRead
+      parameters:
+      - name: category
+        in: query
+        schema:
+          type: string
+          enum:
+          - requests
+          - tasks
+          - messages
+        description: Только эта категория
+      responses:
+        '204':
+          description: Отмечено
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /notifications/{id}/read:
+    patch:
+      tags:
+      - Notifications
+      summary: Отметить прочитанным
+      operationId: markNotificationRead
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '204':
+          description: Прочитано
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /curator/workspaces:
+    get:
+      tags:
+      - Curator
+      summary: Дашборд куратора (Светофор)
+      operationId: getCuratorWorkspaces
+      description: 'Сигналы проблем вычисляются на лету: `no_activity` (нет активности 7 дней и больше), `overdue_tasks` (просрочено 2 задачи
+        и больше), `bad_reviews` (последняя оценка встречи 2 и ниже). `severity`: `red` при стагнации или двух сигналах, `yellow` при одном, иначе
+        `green`. В ответе `counts` для плиток (только незавершённые пары). Статус `stagnation` куратор ставит вручную.'
+      parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+        description: Поиск по имени ученика или наставника
+      - name: sort
+        in: query
+        schema:
+          type: string
+          enum:
+          - severity
+          - activity
+          default: severity
+        description: '`severity` — сначала проблемные'
+      - name: has_signals
+        in: query
+        schema:
+          type: boolean
+      - *id004
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 10
+          maximum: 50
+      responses:
+        '200':
+          description: Список пар
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CuratorWorkspacePageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /curator/workspaces/{id}/status:
+    patch:
+      tags:
+      - Curator
+      summary: Ручная смена статуса пары
+      operationId: changeWorkspaceStatus
+      description: Пара в `active`, `paused`, `stagnation` занимает слот наставника, `completed` освобождает его.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                  - active
+                  - paused
+                  - stagnation
+                  - completed
+      responses:
+        '200':
+          description: Статус обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /curator/requests:
+    get:
+      tags:
+      - Curator
+      summary: Очередь заявок (резерв)
+      operationId: getCuratorRequests
+      description: 'Резерв: экрана в MVP нет. Заявки всех пар для модерации; закрыть заявку можно через `PATCH /requests/{id}/status` со статусом
+        `rejected_by_curator` и причиной.'
+      parameters:
+      - *id004
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 10
+          maximum: 50
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+          - pending
+          - approved_by_mentor
+          - accepted
+          - rejected_by_mentor
+          - rejected_by_curator
+          - cancelled
+      responses:
+        '200':
+          description: Страница заявок
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CuratorRequestPageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Curator
+      summary: Предложить наставника ученику (ручной подбор)
+      operationId: createCuratorRequest
+      description: 'Создаёт обычную заявку `pending` от ученика к выбранному наставнику (в лимит 3 активных заявок не входит). Наставник и ученик
+        получают уведомление: наставник одобряет, ученик подтверждает. У ученика должен быть `needs_curator_help = true`; у наставника есть свободное
+        место.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - student_id
+              - mentor_id
+              properties:
+                student_id: *id002
+                mentor_id: *id002
+                service_package_id: *id002
+      responses:
+        '201':
+          description: Заявка создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /curator/profiles:
+    get:
+      tags:
+      - Curator
+      summary: Профили для обработки куратором
+      operationId: getCuratorProfiles
+      description: 'Единый список с фильтрами: запросы помощи (`needs_help=true`) и очередь верификации (`verification_status=pending`). В ответе
+        есть `email` для связи с пользователем вне системы.'
+      parameters:
+      - name: needs_help
+        in: query
+        schema:
+          type: boolean
+      - name: verification_status
+        in: query
+        schema:
+          type: string
+          enum:
+          - none
+          - pending
+          - verified
+          - rejected
+      - *id004
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 10
+          maximum: 50
+      responses:
+        '200':
+          description: Страница профилей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfilePageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /curator/profiles/{id}/help-resolved:
+    patch:
+      tags:
+      - Curator
+      summary: Закрыть запрос помощи
+      operationId: resolveHelpRequest
+      description: 'Закрывает запрос помощи: сбрасывает `needs_curator_help` и отправляет пользователю уведомление `system_alert` (текст из `comment`,
+        например причина отказа в подборе). `comment` в профиле не хранится.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+                  description: Комментарий куратора, попадает в `message` уведомления
+      responses:
+        '200':
+          description: Запрос закрыт
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CuratorProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /curator/profiles/{id}/verification:
+    patch:
+      tags:
+      - Curator
+      summary: Итог верификации наставника
+      operationId: setVerificationStatus
+      description: Только из статуса `pending`. Сами документы куратор проверяет вручную вне системы. Комментарий (обязателен при `rejected`)
+        уходит наставнику уведомлением `system_alert` и в профиле не хранится.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                  - verified
+                  - rejected
+                comment:
+                  type: string
+                  maxLength: 1000
+      responses:
+        '200':
+          description: Статус обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CuratorProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /curator/profiles/{id}/verification/request-documents:
+    post:
+      tags:
+      - Curator
+      summary: Запросить дополнительный документ
+      operationId: requestMoreDocuments
+      description: Отправляет наставнику уведомление `system_alert` с комментарием. Статус остаётся `pending`.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - comment
+              properties:
+                comment:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+      responses:
+        '204':
+          description: Уведомление отправлено
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /curator/profiles/{id}/candidates:
+    get:
+      tags:
+      - Curator
+      summary: Кандидаты для ручного подбора
+      operationId: getCuratorCandidates
+      description: '`id` — профиль ученика. Те же критерии, что и в умном подборе, но только опубликованные верифицированные наставники со свободными
+        местами; не более 5.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: До 5 наставников
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                  - $ref: '#/components/schemas/MentorSummary'
+                  - type: object
+                    required:
+                    - match
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /curator/workspaces/{id}/notify:
+    post:
+      tags:
+      - Curator
+      summary: Написать паре (уведомлением)
+      operationId: notifyWorkspace
+      description: Отправляет уведомление `system_alert` выбранной стороне пары. Чата с куратором нет, переписку пары куратор не читает.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - target
+              - message
+              properties:
+                target:
+                  type: string
+                  enum:
+                  - student
+                  - mentor
+                  - both
+                message:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+      responses:
+        '204':
+          description: Уведомление отправлено
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /auth/invitation/accept:
+    post:
+      tags:
+      - Auth
+      summary: Принять приглашение куратора (задать пароль)
+      operationId: acceptInvitation
+      description: 'Токен из письма живёт 48 часов (хранится в Redis). Просроченный или использованный токен: 400 `INVALID_TOKEN`.'
+      security: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - token
+              - new_password
+              properties:
+                token:
+                  type: string
+                new_password:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Пароль задан, пользователь вошёл
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /admin/users:
+    get:
+      tags:
+      - Admin
+      summary: Пользователи
+      operationId: getAdminUsers
+      description: 'Только роль `admin`. Статусы вычисляются: `hidden` — наставник с `is_published = false`; `awaiting_match` — ученик с `needs_curator_help
+        = true`; `invited` — куратор, который ещё не задал пароль; иначе `active`. В ответе `counts` для плиток.'
+      parameters:
+      - *id004
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+          maximum: 100
+      - name: role
+        in: query
+        schema:
+          type: string
+          enum:
+          - student
+          - mentor
+          - curator
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+          - active
+          - hidden
+          - awaiting_match
+          - invited
+      - name: q
+        in: query
+        schema:
+          type: string
+        description: Поиск по имени или почте
+      responses:
+        '200':
+          description: Страница пользователей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserPageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/curators:
+    post:
+      tags:
+      - Admin
+      summary: Создать куратора (отправить приглашение)
+      operationId: createCurator
+      description: 'Только роль `admin`. Создаёт аккаунт куратора без пароля и отправляет письмо со ссылкой на 48 часов (`POST /auth/invitation/accept`).
+        Если куратор с такой почтой уже создан, но пароль не задал, приглашение отправляется повторно (200). Если почта занята другим аккаунтом:
+        409.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - first_name
+              - last_name
+              - email
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Приглашение отправлено повторно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserItem'
+        '201':
+          description: Куратор создан, приглашение отправлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /faq:
+    get:
+      tags:
+      - FAQ
+      summary: Вопросы и ответы
+      operationId: getFaq
+      description: База FAQ-бота (тот же текст, что использует `POST /faq/ask`).
+      security: *id001
+      responses:
+        '200':
+          description: Все вопросы с ответами
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FaqEntry'
+  /faq/ask:
+    post:
+      tags:
+      - FAQ
+      summary: Спросить FAQ-бота
+      operationId: askFaq
+      description: 'Простой бот по ключевым словам: ищет вопрос из базы с наибольшим совпадением. Если ничего не найдено, `matched = false`,
+        в `answer` подсказка обратиться к куратору, в `suggestions` популярные вопросы.'
+      security: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - question
+              properties:
+                question:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+      responses:
+        '200':
+          description: Ответ бота
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FaqAnswer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    BadRequest:
+      description: Ошибка валидации
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Не авторизован (токен отсутствует или истёк)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Доступ запрещен (нехватка прав)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Ресурс не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Конфликт бизнес-логики
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Превышен лимит попыток или частоты отправки кода
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+      headers:
+        Retry-After:
+          description: Через сколько секунд можно повторить
+          schema:
+            type: integer
+  schemas:
+    FaqEntry:
+      type: object
+      required:
+      - id
+      - question
+      - answer
+      properties:
+        id:
+          type: string
+          example: cancel_request
+        question:
+          type: string
+        answer:
+          type: string
+    FaqAnswer:
+      type: object
+      required:
+      - matched
+      - answer
+      - suggestions
+      properties:
+        matched:
+          type: boolean
+        question_id:
+          type: string
+          nullable: true
+          description: id найденного вопроса (null, если ничего не найдено)
+        answer:
+          type: string
+        suggestions:
+          type: array
+          maxItems: 3
+          items:
+            type: object
+            required:
+            - id
+            - question
+            properties:
+              id:
+                type: string
+              question:
+                type: string
+    ErrorResponse:
+      type: object
+      required:
+      - error_code
+      - message
+      properties:
+        error_code:
+          type: string
+          enum:
+          - VALIDATION_ERROR
+          - UNAUTHORIZED
+          - FORBIDDEN
+          - NOT_FOUND
+          - CONFLICT
+          - INVALID_CODE
+          - TOO_MANY_REQUESTS
+          - ROLE_REQUIRED
+          - PROFILE_INCOMPLETE
+          - MENTOR_LIMIT_REACHED
+          - REQUEST_LIMIT_REACHED
+          - DUPLICATE_REQUEST
+          - REVIEW_EXISTS
+          - INVALID_TOKEN
+          - INVALID_TRANSITION
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+    MentorPageResponse:
+      type: object
+      required:
+      - total
+      - page
+      - items
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MentorSummary'
+    RequestPageResponse:
+      type: object
+      required:
+      - total
+      - page
+      - items
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequestResponse'
+    CuratorRequestPageResponse:
+      type: object
+      required:
+      - total
+      - page
+      - items
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CuratorRequestResponse'
+    WorkspacePageResponse:
+      type: object
+      required:
+      - total
+      - page
+      - items
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceSummary'
+    ProfilePageResponse:
+      type: object
+      required:
+      - total
+      - page
+      - items
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CuratorProfileResponse'
+    ReviewPageResponse:
+      type: object
+      required:
+      - total
+      - page
+      - items
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewResponse'
+    CuratorWorkspacePageResponse:
+      type: object
+      required:
+      - total
+      - page
+      - items
+      - counts
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CuratorWorkspaceSummary'
+        counts:
+          type: object
+          required:
+          - total
+          - active
+          - paused
+          - stagnation
+          properties:
+            total:
+              type: integer
+            active:
+              type: integer
+            paused:
+              type: integer
+            stagnation:
+              type: integer
+    NotificationPageResponse:
+      type: object
+      required:
+      - total
+      - page
+      - items
+      - unread_count
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        unread_count:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationResponse'
+    UnreadCounts:
+      type: object
+      required:
+      - total
+      - requests
+      - tasks
+      - messages
+      properties:
+        total:
+          type: integer
+        requests:
+          type: integer
+        tasks:
+          type: integer
+        messages:
+          type: integer
+    CodeSentResponse:
+      type: object
+      required:
+      - expires_in_seconds
+      - resend_after_seconds
+      properties:
+        expires_in_seconds:
+          type: integer
+          example: 600
+        resend_after_seconds:
+          type: integer
+          example: 60
+    RegisterRequest:
+      type: object
+      required:
+      - role
+      - email
+      - password
+      - first_name
+      - last_name
+      - terms_accepted
+      properties:
+        role:
+          type: string
+          enum:
+          - student
+          - mentor
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        first_name:
+          type: string
+        last_name:
+          type: string
+        middle_name:
+          type: string
+        terms_accepted:
+          type: boolean
+          enum:
+          - true
+          description: Согласие с условиями и обработкой персональных данных. Момент согласия сохраняется в `Users.consent_at`.
+    LoginRequest:
+      type: object
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        remember_me:
+          type: boolean
+          default: false
+          description: При `true` выдаётся долгоживущий refresh-токен
+    TokenResponse:
+      type: object
+      required:
+      - access_token
+      - refresh_token
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+    UserMeResponse:
+      type: object
+      required:
+      - id
+      - email
+      - role
+      - has_password
+      properties:
+        id: *id002
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum:
+          - student
+          - mentor
+          - curator
+          - admin
+        has_password:
+          type: boolean
+          description: false для аккаунтов, созданных через Яндекс ID
+        password_changed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: null, если пароль ни разу не менялся
+    SkillObject:
+      type: object
+      required:
+      - skill
+      - level
+      properties:
+        skill:
+          type: string
+          description: Название из словаря (`GET /skills`)
+        level:
+          type: integer
+          enum:
+          - 1
+          - 2
+          - 3
+          description: 1 — Новичок, 2 — Уверенно, 3 — Профи/Эксперт. Для наставника допустимы только 2 и 3.
+    AvailabilitySlots:
+      type: object
+      additionalProperties: false
+      description: 'Удобные часы по дням недели в екатеринбургском времени. Каждое число — начало часового слота (8..21). Пример: `{"mon": [19,
+        20, 21], "sat": [10, 11, 12, 13]}`.'
+      properties:
+        mon:
+          $ref: '#/components/schemas/HourList'
+        tue:
+          $ref: '#/components/schemas/HourList'
+        wed:
+          $ref: '#/components/schemas/HourList'
+        thu:
+          $ref: '#/components/schemas/HourList'
+        fri:
+          $ref: '#/components/schemas/HourList'
+        sat:
+          $ref: '#/components/schemas/HourList'
+        sun:
+          $ref: '#/components/schemas/HourList'
+    HourList:
+      type: array
+      uniqueItems: true
+      items:
+        type: integer
+        minimum: 8
+        maximum: 21
+    UpdatePackageRequest:
+      type: object
+      properties:
+        title: &id005
+          type: string
+        description: &id006
+          type: string
+          description: Блок «Что пройдём»
+        result: &id007
+          type: string
+          description: Блок «Результат»
+        price: &id008
+          type: number
+          minimum: 0
+          description: Цена за одно занятие; 0 = бесплатно
+        session_count: &id009
+          type: integer
+          minimum: 1
+          description: Количество занятий (час в программе = занятия по 60 минут)
+        skills: &id010
+          type: array
+          items:
+            type: string
+          description: Названия навыков из словаря
+        status:
+          type: string
+          enum:
+          - draft
+          - published
+    CreatePackageRequest:
+      allOf:
+      - $ref: '#/components/schemas/UpdatePackageRequest'
+      required:
+      - title
+    ServicePackage:
+      type: object
+      required:
+      - id
+      - title
+      - status
+      properties:
+        id: *id002
+        title: *id005
+        description: *id006
+        result: *id007
+        price: *id008
+        session_count: *id009
+        skills: *id010
+        status:
+          type: string
+          enum:
+          - draft
+          - published
+          - archived
+        pairs_count:
+          type: integer
+          readOnly: true
+          description: Число пар по этой программе
+    MentorStats:
+      type: object
+      required:
+      - reviews_count
+      - active_students
+      - max_students
+      - free_slots
+      - completed_pairs
+      - meetings_this_month
+      properties:
+        rating_avg:
+          type: number
+          nullable: true
+        reviews_count:
+          type: integer
+        active_students:
+          type: integer
+        max_students:
+          type: integer
+        free_slots:
+          type: integer
+        completed_pairs:
+          type: integer
+        meetings_this_month:
+          type: integer
+          description: Число прошедших встреч за последние 30 дней
+    AdminUserItem:
+      type: object
+      required:
+      - id
+      - first_name
+      - last_name
+      - email
+      - role
+      - status
+      - created_at
+      properties:
+        id: *id002
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum:
+          - student
+          - mentor
+          - curator
+          - admin
+        status:
+          type: string
+          enum:
+          - active
+          - hidden
+          - awaiting_match
+          - invited
+        created_at: *id011
+    AdminUserPageResponse:
+      type: object
+      required:
+      - total
+      - page
+      - items
+      - counts
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminUserItem'
+        counts:
+          type: object
+          required:
+          - students
+          - mentors
+          - curators
+          - active_pairs
+          properties:
+            students:
+              type: integer
+            mentors:
+              type: integer
+            curators:
+              type: integer
+            active_pairs:
+              type: integer
+    VerificationAsset:
+      type: object
+      required:
+      - id
+      - type
+      - name
+      - url
+      properties:
+        id: *id002
+        type:
+          type: string
+          enum:
+          - file
+          - link
+        name:
+          type: string
+        url:
+          type: string
+          format: uri
+    VerificationResponse:
+      type: object
+      required:
+      - verification_status
+      - verification_assets
+      properties:
+        verification_status: &id012
+          type: string
+          enum:
+          - none
+          - pending
+          - verified
+          - rejected
+        verification_assets:
+          type: array
+          items:
+            $ref: '#/components/schemas/VerificationAsset'
+    NotificationChannels:
+      type: object
+      required:
+      - site
+      - email
+      properties:
+        site:
+          type: boolean
+        email:
+          type: boolean
+    NotificationPreferences:
+      type: object
+      description: Матрица «категория × канал». `system_alert` отключить нельзя.
+      properties:
+        requests:
+          $ref: '#/components/schemas/NotificationChannels'
+        tasks:
+          $ref: '#/components/schemas/NotificationChannels'
+        messages:
+          $ref: '#/components/schemas/NotificationChannels'
+        recommendations:
+          $ref: '#/components/schemas/NotificationChannels'
+    UpdateProfileRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        middle_name:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+          description: Устанавливается через `POST /profiles/me/avatar`
+        age:
+          type: integer
+          minimum: 14
+          maximum: 100
+        current_status:
+          type: string
+          enum:
+          - student
+          - graduate
+          - junior
+          - switcher
+          description: Студент / Выпускник / Молодой специалист / Меняю профессию
+        university:
+          type: string
+        major:
+          type: string
+        course:
+          type: integer
+        experience:
+          type: string
+          enum:
+          - none
+          - under_1
+          - 1_to_3
+          - 3_to_5
+          - over_3
+          - 5_to_10
+          - over_10
+          description: 'Ученик: none, under_1, 1_to_3, over_3. Наставник: 1_to_3, 3_to_5, 5_to_10, over_10.'
+        job_title:
+          type: string
+          description: 'Для фрилансера: например «Фриланс-разработчик»'
+        company:
+          type: string
+          nullable: true
+          description: Необязательно (фрилансер или самозанятый)
+        bio:
+          type: string
+          maxLength: 300
+        hourly_rate:
+          type: number
+          minimum: 0
+          description: Цена за 60 минут; 0 = бесплатно
+        max_students:
+          type: integer
+          minimum: 1
+          maximum: 10
+        is_published:
+          type: boolean
+        communication_style:
+          type: string
+          enum:
+          - friendly
+          - structured
+          - free
+        availability_slots:
+          $ref: '#/components/schemas/AvailabilitySlots'
+        main_goals:
+          type: array
+          maxItems: 2
+          items:
+            type: string
+            enum: &id013
+            - find_job_or_internship
+            - learn_new_skill
+            - build_project
+            - interview_prep
+            - change_direction
+            - develop_soft_skills
+        success_metric:
+          type: string
+          description: Какой результат будет успехом
+        time_limit:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Часов в неделю. Ученик 1–8 (8 = «8 и более»), наставник 1–10 (10 = «10 и более»).
+        needs_curator_help:
+          type: boolean
+        min_duration_months:
+          type: integer
+          minimum: 1
+          description: Срок «от», месяцев. Ученик и наставник задают диапазон «от и до»
+        max_duration_months:
+          type: integer
+          maximum: 12
+          description: Срок «до», месяцев
+        current_skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillObject'
+        target_skills:
+          type: array
+          description: Навыки, которые хочет развить (названия из словаря, без уровней)
+          items:
+            type: string
+        help_topics:
+          type: array
+          description: 'Наставник: с чем готов помочь'
+          items:
+            type: string
+            enum: &id014
+            - interview_prep
+            - code_review
+            - portfolio
+            - career_growth
+            - change_direction
+            - soft_skills
+            - first_job_in_it
+        target_student_levels:
+          type: array
+          description: 'Наставник: с кем работает'
+          items:
+            type: string
+            enum:
+            - beginner
+            - has_basics
+            - advanced
+        notification_preferences:
+          $ref: '#/components/schemas/NotificationPreferences'
+        onboarding_completed:
+          type: boolean
+          description: Клиент отправляет `true` последним шагом анкеты
+    ProfileDetailResponse:
+      allOf:
+      - $ref: '#/components/schemas/UpdateProfileRequest'
+      - type: object
+        required:
+        - id
+        - user_id
+        - role
+        - verification_status
+        properties:
+          id: *id002
+          user_id: *id002
+          role:
+            type: string
+            enum:
+            - student
+            - mentor
+            - curator
+            - admin
+          verification_status: *id012
+          verification_assets:
+            type: array
+            description: Видны только владельцу профиля и куратору
+            items:
+              $ref: '#/components/schemas/VerificationAsset'
+          free_slots:
+            type: integer
+            readOnly: true
+            description: 'Только наставник: `max_students` минус занятые пары'
+    CuratorProfileResponse:
+      allOf:
+      - $ref: '#/components/schemas/ProfileDetailResponse'
+      - type: object
+        required:
+        - email
+        properties:
+          email:
+            type: string
+            format: email
+    PersonRef:
+      type: object
+      required:
+      - id
+      - first_name
+      - last_name
+      properties:
+        id: *id002
+        first_name:
+          type: string
+        last_name:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+          nullable: true
+    StudentPublicSummary:
+      type: object
+      required:
+      - id
+      - first_name
+      description: Данные ученика, которые видит наставник до создания пары. Фамилия, фото, возраст, курс и специальность скрыты; открываются
+        фамилия и фото после создания воркспейса.
+      properties:
+        id: *id002
+        first_name:
+          type: string
+        target_skills:
+          type: array
+          items:
+            type: string
+        main_goals:
+          type: array
+          items:
+            type: string
+            enum: *id013
+        time_limit:
+          type: integer
+        min_duration_months:
+          type: integer
+        max_duration_months:
+          type: integer
+        communication_style:
+          type: string
+          enum:
+          - friendly
+          - structured
+          - free
+    MatchInfo:
+      type: object
+      required:
+      - percent
+      - breakdown
+      description: 'Совместимость с анкетой текущего ученика. Веса: навыки 50%, цели 20%, время 20%, стиль 10%.'
+      properties:
+        percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        breakdown:
+          type: object
+          required:
+          - skills
+          - goals
+          - time
+          - style
+          properties:
+            skills:
+              type: integer
+              minimum: 0
+              maximum: 100
+            goals:
+              type: integer
+              minimum: 0
+              maximum: 100
+            time:
+              type: integer
+              minimum: 0
+              maximum: 100
+            style:
+              type: integer
+              minimum: 0
+              maximum: 100
+    MentorSummary:
+      type: object
+      required:
+      - id
+      - first_name
+      - last_name
+      properties:
+        id: *id002
+        first_name:
+          type: string
+        last_name:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+          nullable: true
+        job_title:
+          type: string
+          description: 'Для фрилансера: например «Фриланс-разработчик»'
+        company:
+          type: string
+          nullable: true
+          description: Необязательно (фрилансер или самозанятый)
+        experience:
+          type: string
+          enum:
+          - 1_to_3
+          - 3_to_5
+          - 5_to_10
+          - over_10
+        bio:
+          type: string
+        hourly_rate:
+          type: number
+        verification_status: *id012
+        current_skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillObject'
+        rating_avg:
+          type: number
+          minimum: 0
+          maximum: 5
+          nullable: true
+          description: null, пока нет отзывов
+        reviews_count:
+          type: integer
+        free_slots:
+          type: integer
+          minimum: 0
+        time_limit:
+          type: integer
+          minimum: 1
+          maximum: 10
+        communication_style:
+          type: string
+          enum:
+          - friendly
+          - structured
+          - free
+        match:
+          $ref: '#/components/schemas/MatchInfo'
+    MentorDetailResponse:
+      allOf:
+      - $ref: '#/components/schemas/MentorSummary'
+      - type: object
+        properties:
+          help_topics:
+            type: array
+            items:
+              type: string
+              enum: *id014
+          target_student_levels:
+            type: array
+            items:
+              type: string
+              enum:
+              - beginner
+              - has_basics
+              - advanced
+          availability_slots:
+            $ref: '#/components/schemas/AvailabilitySlots'
+          max_students:
+            type: integer
+          service_packages:
+            type: array
+            items:
+              $ref: '#/components/schemas/ServicePackage'
+    ReviewResponse:
+      type: object
+      required:
+      - id
+      - rating
+      - author_first_name
+      - created_at
+      properties:
+        id: *id002
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        author_first_name:
+          type: string
+        meeting_date: *id011
+        created_at: *id011
+    CreateRequestPayload:
+      type: object
+      required:
+      - mentor_id
+      properties:
+        mentor_id: *id002
+        service_package_id:
+          type: string
+          format: uuid
+          description: Если не передан, это открытый запрос
+        cover_letter:
+          type: string
+          maxLength: 1000
+    RequestStatusUpdate:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - approved_by_mentor
+          - accepted
+          - rejected_by_mentor
+          - rejected_by_curator
+          - cancelled
+        rejection_reason:
+          type: string
+    RequestResponse:
+      type: object
+      required:
+      - id
+      - student_id
+      - mentor_id
+      - status
+      - created_at
+      properties:
+        id: *id002
+        student_id: *id002
+        mentor_id: *id002
+        student:
+          $ref: '#/components/schemas/StudentPublicSummary'
+        mentor:
+          $ref: '#/components/schemas/PersonRef'
+        service_package_id: *id002
+        service_package_title:
+          type: string
+          description: Для открытого запроса отсутствует
+        status:
+          type: string
+          enum:
+          - pending
+          - approved_by_mentor
+          - accepted
+          - rejected_by_mentor
+          - rejected_by_curator
+          - cancelled
+        cover_letter:
+          type: string
+        rejection_reason:
+          type: string
+          description: Показывается ученику (например, «Отклонено куратором»)
+        workspace_id:
+          type: string
+          format: uuid
+          description: Есть у заявки в статусе `accepted`
+        match:
+          allOf:
+          - $ref: '#/components/schemas/MatchInfo'
+          description: Совместимость ученика с наставником; только в ответах для наставника
+        created_at: *id011
+        updated_at: *id011
+    CuratorRequestResponse:
+      allOf:
+      - $ref: '#/components/schemas/RequestResponse'
+      - type: object
+        properties:
+          student_full:
+            $ref: '#/components/schemas/PersonRef'
+    WorkspaceSummary:
+      type: object
+      required:
+      - id
+      - status
+      - partner
+      - progress_percent
+      - started_at
+      properties:
+        id: *id002
+        status:
+          type: string
+          enum:
+          - active
+          - paused
+          - stagnation
+          - completed
+        partner:
+          $ref: '#/components/schemas/PersonRef'
+        progress_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Доля задач в статусе `completed` от всех задач воркспейса
+        started_at: *id011
+        unread_messages:
+          type: integer
+        tasks_on_review:
+          type: integer
+          description: 'Для наставника: сколько задач ждёт проверки'
+        inactive_days:
+          type: integer
+          nullable: true
+          description: Дней без активности в паре (null, если активность сегодня)
+    CuratorWorkspaceSummary:
+      type: object
+      required:
+      - id
+      - status
+      - severity
+      - student_name
+      - mentor_name
+      - progress_percent
+      - started_at
+      - signals
+      properties:
+        id: *id002
+        status:
+          type: string
+          enum:
+          - active
+          - paused
+          - stagnation
+          - completed
+        severity:
+          type: string
+          enum:
+          - green
+          - yellow
+          - red
+        student_name:
+          type: string
+        mentor_name:
+          type: string
+        progress_percent:
+          type: integer
+        started_at: *id011
+        last_activity_at:
+          type: string
+          format: date-time
+          nullable: true
+        signals:
+          type: array
+          items:
+            type: object
+            required:
+            - type
+            - value
+            properties:
+              type:
+                type: string
+                enum:
+                - no_activity
+                - overdue_tasks
+                - bad_reviews
+              value:
+                type: integer
+                description: Дней без активности / число просроченных задач / последняя оценка
+    MeetingResponse:
+      type: object
+      required:
+      - id
+      - workspace_id
+      - title
+      - start_time
+      - jitsi_link
+      properties:
+        id: *id002
+        workspace_id: *id002
+        title:
+          type: string
+        start_time: *id011
+        end_time: *id011
+        jitsi_link:
+          type: string
+          format: uri
+          description: Постоянная ссылка пары (из воркспейса)
+        my_review_rating:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 5
+    CreateMeetingRequest:
+      type: object
+      required:
+      - start_time
+      properties:
+        title:
+          type: string
+          description: По умолчанию «Встреча»
+        start_time: *id011
+        end_time: *id011
+    UpdateMeetingRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        start_time: *id011
+        end_time: *id011
+    WorkspaceDetailResponse:
+      allOf:
+      - $ref: '#/components/schemas/WorkspaceSummary'
+      - type: object
+        properties:
+          goal:
+            type: string
+            description: Цель ученика (`success_metric` его анкеты)
+          service_package_title:
+            type: string
+          jitsi_link:
+            type: string
+            format: uri
+            description: Постоянная ссылка на видеовстречи пары
+          sessions_done:
+            type: integer
+            description: Проведённые встречи
+          sessions_total:
+            type: integer
+            nullable: true
+            description: '`session_count` программы; null у открытого запроса'
+          tasks_total:
+            type: integer
+          tasks_completed:
+            type: integer
+          next_meeting:
+            $ref: '#/components/schemas/MeetingResponse'
+    TaskResponse:
+      type: object
+      required:
+      - id
+      - title
+      - status
+      - deadline_at
+      - created_at
+      properties:
+        id: *id002
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum:
+          - todo
+          - in_progress
+          - on_review
+          - needs_revision
+          - completed
+        deadline_at: *id011
+        created_at: *id011
+        updated_at: *id011
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        artifacts_url:
+          type: string
+          format: uri
+        mentor_comment:
+          type: string
+        comments_count:
+          type: integer
+    UpdateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        deadline_at: *id011
+    CreateTaskRequest:
+      type: object
+      required:
+      - title
+      - deadline_at
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        deadline_at: *id011
+    TaskCommentResponse:
+      type: object
+      required:
+      - id
+      - task_id
+      - author
+      - text
+      - created_at
+      properties:
+        id: *id002
+        task_id: *id002
+        author:
+          $ref: '#/components/schemas/PersonRef'
+        text:
+          type: string
+        created_at: *id011
+    CreateMeetingNoteRequest:
+      type: object
+      required:
+      - title
+      - content
+      - meeting_date
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+          description: Markdown
+        meeting_date: *id011
+    UpdateMeetingNoteRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        meeting_date: *id011
+    MeetingNoteResponse:
+      allOf:
+      - $ref: '#/components/schemas/CreateMeetingNoteRequest'
+      - type: object
+        required:
+        - id
+        - author_id
+        - created_at
+        properties:
+          id: *id002
+          author_id: *id002
+          created_at: *id011
+          updated_at: *id011
+    SendMessageRequest:
+      type: object
+      minProperties: 1
+      properties:
+        text:
+          type: string
+          maxLength: 4000
+        file_id: *id002
+    MessageResponse:
+      type: object
+      required:
+      - id
+      - type
+      - is_read
+      - created_at
+      properties:
+        id: *id002
+        type:
+          type: string
+          enum:
+          - text
+          - system
+          description: '`system` — служебная строка, например «Встреча назначена»'
+        sender_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: null у системных сообщений
+        text:
+          type: string
+          nullable: true
+        file:
+          allOf:
+          - $ref: '#/components/schemas/FileResponse'
+          nullable: true
+        is_read:
+          type: boolean
+        created_at: *id011
+    FileResponse:
+      type: object
+      required:
+      - id
+      - type
+      - file_name
+      - file_url
+      - uploaded_by
+      - created_at
+      properties:
+        id: *id002
+        type:
+          type: string
+          enum:
+          - file
+          - link
+        file_name:
+          type: string
+          description: Для ссылки — её заголовок
+        file_url:
+          type: string
+          format: uri
+        file_size_kb:
+          type: integer
+          nullable: true
+          description: null у ссылок
+        uploaded_by: *id002
+        created_at: *id011
+    CalendarResponse:
+      type: object
+      required:
+      - meetings
+      - task_deadlines
+      - partners_availability
+      properties:
+        meetings:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetingResponse'
+        availability_slots:
+          $ref: '#/components/schemas/AvailabilitySlots'
+        task_deadlines:
+          type: array
+          items:
+            type: object
+            required:
+            - task_id
+            - workspace_id
+            - title
+            - deadline_at
+            - status
+            properties:
+              task_id: *id002
+              workspace_id: *id002
+              title:
+                type: string
+              deadline_at: *id011
+              status:
+                type: string
+        partners_availability:
+          type: array
+          description: Свободные слоты партнёров (пунктир в сетке)
+          items:
+            type: object
+            required:
+            - workspace_id
+            - partner
+            - availability_slots
+            properties:
+              workspace_id: *id002
+              partner:
+                $ref: '#/components/schemas/PersonRef'
+              availability_slots:
+                $ref: '#/components/schemas/AvailabilitySlots'
+    NotificationResponse:
+      type: object
+      required:
+      - id
+      - type
+      - title
+      - is_read
+      - created_at
+      properties:
+        id: *id002
+        type:
+          type: string
+          enum:
+          - request_update
+          - task_review
+          - new_message
+          - new_recommendations
+          - meeting_update
+          - system_alert
+        title:
+          type: string
+        message:
+          type: string
+          description: Развёрнутый текст (например, комментарий куратора)
+        entity_id: *id002
+        is_read:
+          type: boolean
+        created_at: *id011
