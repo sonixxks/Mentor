@@ -1,0 +1,692 @@
+.catalog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 70px;
+  color: var(--color-text-primary);
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 224px;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.searchWrapper {
+  position: relative;
+  min-width: 0;
+}
+
+.searchIcon {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 18px;
+  transform: translateY(-50%);
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+
+.searchInput {
+  height: 40px;
+  padding-left: 48px;
+  border-radius: 999px;
+}
+
+.sortSelect {
+  height: 40px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 275px;
+  gap: 24px;
+  align-items: start;
+}
+
+.results {
+  min-width: 0;
+}
+
+.resultCount {
+  margin: 0 0 18px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.mentorCard {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 275px;
+  padding: 13px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 24px;
+  background: var(--color-bg-card);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.cardHeader > :first-child {
+  flex: 0 0 auto;
+}
+
+.mentorInfo {
+  min-width: 0;
+  padding-top: 5px;
+}
+
+.mentorInfo h3 {
+  overflow: hidden;
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mentorInfo p {
+  overflow: hidden;
+  margin: 0 0 5px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.rating svg {
+  color: #f4b740;
+}
+
+.rating strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+  min-height: 48px;
+  align-content: flex-start;
+}
+
+.matchTag,
+.skillTag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 27px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.matchTag {
+  background: var(--color-accent-primary);
+  color: white;
+  font-weight: 600;
+}
+
+.skillTag {
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
+.cardMeta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding: 12px 0 13px;
+}
+
+.cardMeta > span {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.cardMeta > span svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.cardMeta > strong {
+  flex: 0 0 auto;
+  color: var(--color-text-primary);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.cardActions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+}
+
+.requestButton,
+.compareButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.requestButton {
+  border: 1px solid #fff;
+  background: #fff;
+  color: #080d20;
+}
+
+.requestButton:hover:not(:disabled) {
+  background: #e8edff;
+}
+
+.requestButton:disabled {
+  border-color: var(--color-border-strong);
+  background: var(--color-bg-base);
+  color: var(--color-text-secondary);
+  cursor: default;
+}
+
+.compareButton {
+  gap: 5px;
+  border: 1px solid var(--color-border-strong);
+  background: transparent;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.compareButton:hover:not(:disabled),
+.compareButtonActive {
+  border-color: var(--color-accent-primary);
+  background: var(--color-accent-primary);
+  color: white;
+}
+
+.compareButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Правая панель фильтров */
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  padding: 20px 18px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 24px;
+  background: var(--color-bg-card);
+}
+
+.filterHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.filterHeading h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.filterHeading button,
+.resetSmall {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-primary);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filterGroup h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.chip:hover {
+  border-color: var(--color-accent-primary);
+}
+
+.chipActive {
+  border-color: var(--color-accent-primary);
+  background: var(--color-accent-primary);
+  color: white;
+}
+
+.filterHint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.resetSmall {
+  align-self: flex-start;
+}
+
+.rangeHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.rangeHeading strong {
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.range {
+  width: 100%;
+  height: 5px;
+  margin: 8px 0;
+  border-radius: 999px;
+  accent-color: var(--color-accent-primary);
+  cursor: pointer;
+}
+
+.priceInputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.priceInput {
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.switchRow input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.switch {
+  position: relative;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--color-border-strong);
+  transition: background 0.15s ease;
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.15s ease;
+}
+
+.switchRow input:checked + .switch {
+  background: var(--color-accent-primary);
+}
+
+.switchRow input:checked + .switch::after {
+  transform: translateX(22px);
+}
+
+/* Сравнение */
+
+.compareBar {
+  position: fixed;
+  right: 32%;
+  bottom: 22px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 8px 10px 8px 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: var(--color-bg-card);
+  box-shadow: 0 8px 30px rgb(0 0 0 / 25%);
+  transform: translateX(50%);
+}
+
+.compareAvatars {
+  display: flex;
+  align-items: center;
+}
+
+.compareAvatars span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-left: -5px;
+  border: 2px solid var(--color-bg-card);
+  border-radius: 50%;
+  background: var(--color-accent-primary);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.compareAvatars span:first-child {
+  margin-left: 0;
+}
+
+.compareBar > strong {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.compareMainButton {
+  min-height: 42px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: white;
+  color: #080d20;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.compareMainButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.clearCompare {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.comparison {
+  padding: 20px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 20px;
+  background: var(--color-bg-card);
+}
+
+.comparisonHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.comparisonHeading h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.comparisonHeading button {
+  display: flex;
+  padding: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.comparisonGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.comparisonGrid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--color-bg-base);
+  font-size: 12px;
+}
+
+.comparisonGrid strong {
+  font-size: 14px;
+}
+
+.comparisonGrid span {
+  color: var(--color-text-secondary);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 20px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 20px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.empty h3,
+.empty p {
+  margin: 0;
+}
+
+.empty h3 {
+  color: var(--color-text-primary);
+  font-size: 17px;
+}
+
+.empty p {
+  font-size: 13px;
+}
+
+.empty button {
+  padding: 9px 16px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.demoNote {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.profileLink,
+.profileName {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.profileLink {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 20px;
+}
+
+.profileName {
+  text-align: left;
+  font-weight: 600;
+}
+
+.profileName:hover {
+  color: var(--color-accent-primary);
+}
+
+.profileLink:focus-visible,
+.profileName:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 4px;
+}
+
+@media (max-width: 1600px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .filters {
+    grid-row: 1;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compareBar {
+    right: 50%;
+  }
+}
+
+@media (max-width: 600px) {
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .compareBar {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    justify-content: center;
+    gap: 8px;
+    padding: 7px;
+    transform: none;
+  }
+
+  .compareBar > strong {
+    font-size: 11px;
+  }
+
+  .compareMainButton {
+    padding: 0 13px;
+  }
+
+  .comparisonGrid {
+    grid-template-columns: 1fr;
+  }
+}
