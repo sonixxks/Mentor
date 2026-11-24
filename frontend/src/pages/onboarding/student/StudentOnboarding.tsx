@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { homeByRole, saveSession } from '../../../lib/auth'
 import { OnboardingShell } from '../OnboardingShell'
 import { STEPS } from '../steps'
-import { initialStudent } from '../types'
+import { MAX_MONTHS, initialStudent } from '../types'
 import type { StudentAnswers } from '../types'
 import { useDraft } from '../useDraft'
 import { AboutStep } from './AboutStep'
@@ -41,6 +41,8 @@ function validate(step: number, a: StudentAnswers) {
 
   if (step === 3) {
     if (a.goals.length === 0) return 'Выбери хотя бы одну цель'
+    if (a.durationFrom < 1 || a.durationTo > MAX_MONTHS || a.durationFrom > a.durationTo)
+      return `Проверь срок: от 1 до ${MAX_MONTHS} месяцев, «от» не больше «до»`
   }
 
   if (step === 4) {

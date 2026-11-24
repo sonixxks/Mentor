@@ -1,7 +1,7 @@
 import { emptySchedule } from '../../components/ui/HourGrid'
 import type { Schedule } from '../../components/ui/HourGrid'
 
-export type SkillLevel = 'beginner' | 'confident' | 'pro'
+export type SkillLevel = 1 | 2 | 3
 
 export type StudentSkill = { name: string; level: SkillLevel }
 
@@ -25,7 +25,8 @@ export type StudentAnswers = {
   currentSkills: StudentSkill[]
   // Шаг 3 · Цели
   goals: string[]
-  durationMonths: number
+  durationFrom: number
+  durationTo: number
   success: string
   // Шаг 4 · Время и стиль
   hoursPerWeek: number
@@ -48,7 +49,8 @@ export const initialStudent: StudentAnswers = {
   targetSkills: [],
   currentSkills: [],
   goals: [],
-  durationMonths: 3,
+  durationFrom: 3,
+  durationTo: 6,
   success: '',
   hoursPerWeek: 2,
   schedule: emptySchedule(),
