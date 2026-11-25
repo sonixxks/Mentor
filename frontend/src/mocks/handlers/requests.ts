@@ -3,6 +3,7 @@ import type { RequestStatus } from '../../api/requests'
 import { MENTORS } from '../data/mentors'
 import { ACTIVE, MENTOR_ID_BY_USER, requests, saveRequests } from '../data/requests'
 import type { MockRequest } from '../data/requests'
+import { createWorkspace } from '../data/workspaces'
 import { API, currentUser, error, save, unauthorized, users } from '../db'
 
 const NEXT: Record<string, Partial<Record<RequestStatus, RequestStatus[]>>> = {
@@ -142,6 +143,7 @@ export const requestHandlers = [
 
     if (body.status === 'accepted') {
       target.workspace_id = `ws-${target.id}`
+      createWorkspace(target)
       requests.forEach((r) => {
         if (r !== target && r.student_id === target.student_id && ACTIVE.includes(r.status)) {
           r.status = 'cancelled'
