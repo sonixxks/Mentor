@@ -77,7 +77,6 @@
   align-self: center;
 }
 
-/* Фильтры */
 .filters {
   padding: 28px var(--space-24);
   display: flex;
@@ -145,8 +144,13 @@
 
 .pair {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-8);
+}
+
+.pair input {
+  width: 100%;
+  min-width: 0;
 }
 
 .hint {
@@ -156,7 +160,6 @@
   color: var(--color-text-muted);
 }
 
-/* Переключатель «Есть свободные места» */
 .switchRow {
   display: flex;
   align-items: center;

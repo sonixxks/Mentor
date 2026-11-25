@@ -52,6 +52,12 @@ export type Task = {
   comments_count?: number
 }
 
+export type TaskInput = {
+  title: string
+  description?: string
+  deadline_at: string
+}
+
 export type TaskStatusUpdate = {
   status: Exclude<TaskStatus, 'todo'>
   artifacts_url?: string
@@ -64,6 +70,12 @@ export type TaskComment = {
   author: PersonRef
   text: string
   created_at: string
+}
+
+export type MeetingInput = {
+  title?: string
+  start_time: string
+  end_time?: string
 }
 
 export type WorkspaceFile = {
@@ -88,6 +100,24 @@ export function getTasks(workspaceId: string) {
   return apiFetch<Task[]>(`/workspaces/${workspaceId}/tasks`)
 }
 
+export function createTask(workspaceId: string, input: TaskInput) {
+  return apiFetch<Task>(`/workspaces/${workspaceId}/tasks`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export function updateTask(taskId: string, input: Partial<TaskInput>) {
+  return apiFetch<Task>(`/tasks/${taskId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
+}
+
+export function deleteTask(taskId: string) {
+  return apiFetch<void>(`/tasks/${taskId}`, { method: 'DELETE' })
+}
+
 export function changeTaskStatus(taskId: string, update: TaskStatusUpdate) {
   return apiFetch<Task>(`/tasks/${taskId}/status`, {
     method: 'PATCH',
@@ -108,6 +138,20 @@ export function addTaskComment(taskId: string, text: string) {
 
 export function getMeetings(workspaceId: string) {
   return apiFetch<Meeting[]>(`/workspaces/${workspaceId}/meetings`)
+}
+
+export function createMeeting(workspaceId: string, input: MeetingInput) {
+  return apiFetch<Meeting>(`/workspaces/${workspaceId}/meetings`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export function updateMeeting(meetingId: string, input: Partial<MeetingInput>) {
+  return apiFetch<Meeting>(`/meetings/${meetingId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
 }
 
 export function reviewMeeting(meetingId: string, rating: number, comment?: string) {

@@ -58,6 +58,16 @@ export type Review = {
   created_at: string
 }
 
+export type MentorStats = {
+  rating_avg: number | null
+  reviews_count: number
+  active_students: number
+  max_students: number
+  free_slots: number
+  completed_pairs: number
+  meetings_this_month: number
+}
+
 export type Page<T> = { total: number; page: number; items: T[] }
 
 export type MentorSort = 'match' | 'rating' | 'price_asc' | 'price_desc' | 'experience'
@@ -104,4 +114,8 @@ export function getMentor(id: string) {
 
 export function getMentorReviews(id: string, page = 1) {
   return apiFetch<Page<Review>>(`/mentors/${id}/reviews?page=${page}&limit=10`)
+}
+
+export function getMyMentorStats() {
+  return apiFetch<MentorStats>('/mentors/me/stats')
 }
