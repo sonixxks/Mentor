@@ -17,6 +17,7 @@ import { StudentRequestsPage } from '../pages/student/StudentRequestsPage'
 import { MentorRequestsPage } from '../pages/mentor/MentorRequestsPage'
 import { WorkspacePage } from '../pages/student/WorkspacePage'
 import { MentorDashboard } from '../pages/mentor/MentorDashboard'
+import { MentorStudentPage, MentorStudentsIndex } from '../pages/mentor/MentorStudentPage'
 
 function RequireGuest() {
   const token = getToken()
@@ -92,6 +93,8 @@ export const router = createBrowserRouter([
         children: [
           { path: '/mentor', element: <MentorDashboard />, handle: { greeting: true } },
           { path: '/mentor/requests', element: <MentorRequestsPage /> },
+          { path: '/mentor/students', element: <MentorStudentsIndex /> },
+          { path: '/mentor/students/:id', element: <MentorStudentPage /> },
           { path: '/mentor/*', element: <ComingSoonPage /> },
         ],
       },
