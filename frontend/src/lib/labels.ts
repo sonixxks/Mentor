@@ -1,4 +1,5 @@
 import type { RequestStatus } from '../api/requests'
+import type { TaskStatus } from '../api/workspaces'
 import { plural } from './plural'
 
 export const EXPERIENCE_LABEL: Record<string, string> = {
@@ -30,16 +31,23 @@ export const STUDENT_LEVEL_LABEL: Record<string, string> = {
   advanced: 'Продвинутые',
 }
 
-export const REQUEST_STATUS: Record<
-  RequestStatus,
-  { label: string; variant: 'pending' | 'approved' | 'rejected' | 'neutral' }
-> = {
+type BadgeTone = 'pending' | 'approved' | 'rejected' | 'review' | 'neutral'
+
+export const REQUEST_STATUS: Record<RequestStatus, { label: string; variant: BadgeTone }> = {
   pending: { label: 'Ждёт ответа', variant: 'pending' },
   approved_by_mentor: { label: 'Наставник согласен', variant: 'approved' },
   accepted: { label: 'Пара создана', variant: 'approved' },
   rejected_by_mentor: { label: 'Отклонена наставником', variant: 'rejected' },
   rejected_by_curator: { label: 'Отклонена куратором', variant: 'rejected' },
   cancelled: { label: 'Отменена', variant: 'neutral' },
+}
+
+export const TASK_STATUS: Record<TaskStatus, { label: string; variant: BadgeTone }> = {
+  todo: { label: 'Не начата', variant: 'neutral' },
+  in_progress: { label: 'В работе', variant: 'neutral' },
+  on_review: { label: 'На проверке', variant: 'review' },
+  needs_revision: { label: 'На доработке', variant: 'pending' },
+  completed: { label: 'Выполнено', variant: 'approved' },
 }
 
 export function formatPrice(price?: number, suffix = '/занятие') {

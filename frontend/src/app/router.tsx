@@ -15,6 +15,7 @@ import { getRole, getToken, homeByRole } from '../lib/auth'
 import { MentorProfilePage } from '../pages/student/MentorProfilePage'
 import { StudentRequestsPage } from '../pages/student/StudentRequestsPage'
 import { MentorRequestsPage } from '../pages/mentor/MentorRequestsPage'
+import { WorkspacePage } from '../pages/student/WorkspacePage'
 
 function RequireGuest() {
   const token = getToken()
@@ -76,6 +77,7 @@ export const router = createBrowserRouter([
             handle: { title: 'Профиль наставника', back: true },
           },
           { path: '/student/requests', element: <StudentRequestsPage /> },
+          { path: '/student/workspace', element: <WorkspacePage /> },
           { path: '/student/*', element: <ComingSoonPage /> },
         ],
       },
