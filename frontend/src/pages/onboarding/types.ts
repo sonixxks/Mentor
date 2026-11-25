@@ -9,9 +9,6 @@ export const MAX_MONTHS = 12
 
 export type StudentAnswers = {
   // Шаг 1 · О себе
-  lastName: string
-  firstName: string
-  middleName: string
   age: string
   status: string
   university: string
@@ -35,9 +32,6 @@ export type StudentAnswers = {
 }
 
 export const initialStudent: StudentAnswers = {
-  lastName: '',
-  firstName: '',
-  middleName: '',
   age: '',
   status: '',
   university: '',
@@ -61,9 +55,6 @@ export type MentorSkill = { name: string; level: 'confident' | 'expert' }
 
 export type MentorAnswers = {
   // Шаг 1 · Опыт
-  lastName: string
-  firstName: string
-  middleName: string
   position: string
   company: string
   selfEmployed: boolean
@@ -88,9 +79,6 @@ export type MentorAnswers = {
 }
 
 export const initialMentor: MentorAnswers = {
-  lastName: '',
-  firstName: '',
-  middleName: '',
   position: '',
   company: '',
   selfEmployed: false,

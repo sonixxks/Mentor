@@ -33,25 +33,6 @@ export function AboutStep({ value, update }: AboutStepProps) {
     <>
       <div className={styles.grid3}>
         <Input
-          label="Фамилия"
-          value={value.lastName}
-          onChange={(e) => update({ lastName: e.target.value })}
-        />
-        <Input
-          label="Имя"
-          value={value.firstName}
-          onChange={(e) => update({ firstName: e.target.value })}
-        />
-        <Input
-          label="Отчество"
-          placeholder="Если есть"
-          value={value.middleName}
-          onChange={(e) => update({ middleName: e.target.value })}
-        />
-      </div>
-
-      <div className={styles.grid3}>
-        <Input
           label="Возраст"
           type="number"
           min={14}

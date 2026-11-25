@@ -18,8 +18,6 @@ import { useSession } from '../../../hooks/useSession'
 
 function validate(step: number, a: StudentAnswers) {
   if (step === 1) {
-    if (!a.lastName.trim() || !a.firstName.trim()) return 'Укажи фамилию и имя'
-
     const age = Number(a.age)
     if (!age || age < 14 || age > 99) return 'Укажи возраст от 14 до 99'
 
@@ -58,15 +56,11 @@ function validate(step: number, a: StudentAnswers) {
   return ''
 }
 
-/** Ответы анкеты → тело запроса PATCH /profiles/me */
 function toProfile(a: StudentAnswers): UpdateProfileRequest {
   const studies = a.status === 'student' || a.status === 'graduate'
   const works = a.status === 'junior' || a.status === 'switcher'
 
   return {
-    first_name: a.firstName.trim(),
-    last_name: a.lastName.trim(),
-    middle_name: a.middleName.trim() || undefined,
     age: Number(a.age),
     current_status: a.status as UpdateProfileRequest['current_status'],
     university: studies ? a.university.trim() : undefined,
