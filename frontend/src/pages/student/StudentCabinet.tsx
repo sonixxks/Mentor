@@ -12,6 +12,7 @@ import { Avatar } from '../../components/ui/Avatar'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { useMyProfile } from '../../hooks/useMyProfile'
+import { useRequestedMentorIds } from '../../hooks/useRequestedMentorIds'
 import { EXPERIENCE_LABEL, formatRating } from '../../lib/labels'
 import { plural } from '../../lib/plural'
 import { GOALS } from '../onboarding/goals'
@@ -46,6 +47,7 @@ export function StudentCabinet() {
   const [showAll, setShowAll] = useState(false)
   const [requestTo, setRequestTo] = useState<RequestTarget | null>(null)
   const profile = useMyProfile()
+  const requested = useRequestedMentorIds()
   const recommendations = useQuery({
     queryKey: ['recommendations'],
     queryFn: getRecommendations,
@@ -111,7 +113,6 @@ export function StudentCabinet() {
               Смягчить фильтры в каталоге
             </Link>
           </div>
-          {/* TODO: неделя 5 — «Уточнить анкету», когда появится страница профиля */}
         </section>
       </div>
     )
@@ -121,6 +122,7 @@ export function StudentCabinet() {
   const visible = showAll ? rest : rest.slice(0, FIRST_VISIBLE)
   const bestName = `${best.first_name} ${best.last_name}`
   const bestUrl = `/student/mentors/${best.id}`
+  const bestRequested = requested.has(best.id)
   const bestFacts = [
     best.job_title,
     best.experience ? `опыт ${EXPERIENCE_LABEL[best.experience]}` : null,
@@ -139,7 +141,6 @@ export function StudentCabinet() {
         </div>
 
         <div className={styles.headingActions}>
-          {/* TODO: неделя 5 — «Уточнить анкету», когда появится страница профиля */}
           <Button variant="secondary" size="md" to="/student/catalog">
             <SlidersHorizontal size={16} />
             Каталог с фильтрами
@@ -160,7 +161,9 @@ export function StudentCabinet() {
           <p>{bestFacts}</p>
 
           <div className={styles.featuredActions}>
-            <Button onClick={() => setRequestTo(best)}>Отправить заявку</Button>
+            <Button disabled={bestRequested} onClick={() => setRequestTo(best)}>
+              {bestRequested ? 'Заявка отправлена' : 'Отправить заявку'}
+            </Button>
             <Button variant="secondary" to={bestUrl}>
               Профиль
             </Button>
@@ -189,7 +192,12 @@ export function StudentCabinet() {
       {visible.length > 0 ? (
         <section className={styles.mentorGrid}>
           {visible.map((mentor) => (
-            <MentorCard key={mentor.id} mentor={mentor} onRequest={() => setRequestTo(mentor)} />
+            <MentorCard
+              key={mentor.id}
+              mentor={mentor}
+              requested={requested.has(mentor.id)}
+              onRequest={() => setRequestTo(mentor)}
+            />
           ))}
         </section>
       ) : null}

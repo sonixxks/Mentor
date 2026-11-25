@@ -1,3 +1,4 @@
+import type { RequestStatus } from '../api/requests'
 import { plural } from './plural'
 
 export const EXPERIENCE_LABEL: Record<string, string> = {
@@ -29,13 +30,23 @@ export const STUDENT_LEVEL_LABEL: Record<string, string> = {
   advanced: 'Продвинутые',
 }
 
-/** 0 или нет цены → «Бесплатно», иначе «1 500 ₽/занятие» */
+export const REQUEST_STATUS: Record<
+  RequestStatus,
+  { label: string; variant: 'pending' | 'approved' | 'rejected' | 'neutral' }
+> = {
+  pending: { label: 'Ждёт ответа', variant: 'pending' },
+  approved_by_mentor: { label: 'Наставник согласен', variant: 'approved' },
+  accepted: { label: 'Пара создана', variant: 'approved' },
+  rejected_by_mentor: { label: 'Отклонена наставником', variant: 'rejected' },
+  rejected_by_curator: { label: 'Отклонена куратором', variant: 'rejected' },
+  cancelled: { label: 'Отменена', variant: 'neutral' },
+}
+
 export function formatPrice(price?: number, suffix = '/занятие') {
   if (!price) return 'Бесплатно'
   return `${price.toLocaleString('ru-RU')} ₽${suffix}`
 }
 
-/** 4.9 → «4,9». Пока нет отзывов → «нет оценок» */
 export function formatRating(rating: number | null) {
   return rating === null ? 'нет оценок' : rating.toFixed(1).replace('.', ',')
 }
