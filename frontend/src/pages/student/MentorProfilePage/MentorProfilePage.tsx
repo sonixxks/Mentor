@@ -6,7 +6,6 @@ import { getMentor, getMentorReviews } from '../../../api/mentors'
 import { RequestModal } from '../../../components/RequestModal'
 import { Button } from '../../../components/ui/Button'
 import { Tag } from '../../../components/ui/Tag'
-import { useRequestedMentorIds } from '../../../hooks/useRequestedMentorIds'
 import {
   EXPERIENCE_LABEL,
   HELP_TOPIC_LABEL,
@@ -36,7 +35,6 @@ function reviewDate(iso: string) {
 export function MentorProfilePage() {
   const { id = '' } = useParams()
   const [requestOpen, setRequestOpen] = useState(false)
-  const requested = useRequestedMentorIds()
   const mentor = useQuery({ queryKey: ['mentor', id], queryFn: () => getMentor(id) })
   const reviews = useQuery({
     queryKey: ['mentor', id, 'reviews'],
@@ -50,7 +48,6 @@ export function MentorProfilePage() {
   const name = `${m.first_name} ${m.last_name}`
   const initials = `${m.first_name[0] ?? ''}${m.last_name[0] ?? ''}`
   const noSlots = m.free_slots === 0
-  const isRequested = requested.has(m.id)
   const facts = [
     m.job_title,
     m.company ?? 'работает самостоятельно',
@@ -87,13 +84,8 @@ export function MentorProfilePage() {
             {m.reviews_count > 0 ? <span>{reviewsLabel(m.reviews_count)}</span> : null}
           </span>
 
-          <Button
-            size="lg"
-            fullWidth
-            disabled={noSlots || isRequested}
-            onClick={() => setRequestOpen(true)}
-          >
-            {isRequested ? 'Заявка отправлена' : noSlots ? 'Мест нет' : 'Отправить заявку'}
+          <Button size="lg" fullWidth disabled={noSlots} onClick={() => setRequestOpen(true)}>
+            {noSlots ? 'Мест нет' : 'Отправить заявку'}
           </Button>
         </section>
 

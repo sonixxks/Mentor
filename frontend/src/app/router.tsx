@@ -14,6 +14,7 @@ import { RequireAuth } from './RequireAuth'
 import { getRole, getToken, homeByRole } from '../lib/auth'
 import { MentorProfilePage } from '../pages/student/MentorProfilePage'
 import { StudentRequestsPage } from '../pages/student/StudentRequestsPage'
+import { MentorRequestsPage } from '../pages/mentor/MentorRequestsPage'
 
 function RequireGuest() {
   const token = getToken()
@@ -87,6 +88,7 @@ export const router = createBrowserRouter([
         element: <CabinetLayout />,
         children: [
           { path: '/mentor', element: <ComingSoonPage /> },
+          { path: '/mentor/requests', element: <MentorRequestsPage /> },
           { path: '/mentor/*', element: <ComingSoonPage /> },
         ],
       },
