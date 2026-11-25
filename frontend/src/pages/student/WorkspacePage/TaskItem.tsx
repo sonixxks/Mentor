@@ -12,6 +12,7 @@ import { formatDate, isPast } from '../../../lib/dates'
 import { errorMessage } from '../../../lib/errorMessage'
 import { TASK_STATUS } from '../../../lib/labels'
 import { plural } from '../../../lib/plural'
+import { TaskComments } from './TaskComments'
 import styles from './WorkspacePage.module.css'
 
 type TaskItemProps = {
@@ -163,9 +164,7 @@ export function TaskItem({ task, workspaceId }: TaskItemProps) {
             </a>
           ) : null}
 
-          {!task.description && !task.mentor_comment && !canSubmit && !task.artifacts_url ? (
-            <p className={styles.muted}>Подробностей пока нет.</p>
-          ) : null}
+          <TaskComments taskId={task.id} workspaceId={workspaceId} />
         </div>
       ) : null}
 

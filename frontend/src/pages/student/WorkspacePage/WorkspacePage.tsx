@@ -7,6 +7,8 @@ import { Avatar } from '../../../components/ui/Avatar'
 import { Button } from '../../../components/ui/Button'
 import { formatMeetingTime, minutesBetween } from '../../../lib/dates'
 import { plural } from '../../../lib/plural'
+import { KnowledgeBase } from './KnowledgeBase'
+import { MeetingReview } from './MeetingReview'
 import { TaskItem } from './TaskItem'
 import styles from './WorkspacePage.module.css'
 
@@ -206,6 +208,8 @@ export function WorkspacePage() {
       <aside className={styles.side}>
         <PartnerCard workspace={ws} />
         <MeetingCard workspace={ws} />
+        <MeetingReview workspaceId={ws.id} />
+        <KnowledgeBase workspace={ws} />
       </aside>
     </div>
   )
