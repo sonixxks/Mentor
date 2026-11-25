@@ -5,6 +5,8 @@ import { useState } from 'react'
 import { getMentors } from '../../api/mentors'
 import type { MentorFilters, MentorSort } from '../../api/mentors'
 import { MentorCard } from '../../components/MentorCard'
+import { RequestModal } from '../../components/RequestModal'
+import type { RequestTarget } from '../../components/RequestModal'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
@@ -49,6 +51,7 @@ export function StudentCatalog() {
   const [limit, setLimit] = useState(PAGE_SIZE)
   const [showAllSkills, setShowAllSkills] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [requestTo, setRequestTo] = useState<RequestTarget | null>(null)
 
   const query = useDebounce(state.query)
   const skillsQuery = useSkills()
@@ -147,9 +150,7 @@ export function StudentCatalog() {
                   <MentorCard
                     key={mentor.id}
                     mentor={mentor}
-                    onRequest={() => {
-                      // TODO: шаг 5 — открыть окно заявки
-                    }}
+                    onRequest={() => setRequestTo(mentor)}
                   />
                 ))}
               </div>
@@ -282,6 +283,8 @@ export function StudentCatalog() {
           <span className={styles.switch} aria-hidden="true" />
         </label>
       </aside>
+
+      {requestTo ? <RequestModal mentor={requestTo} onClose={() => setRequestTo(null)} /> : null}
     </div>
   )
 }

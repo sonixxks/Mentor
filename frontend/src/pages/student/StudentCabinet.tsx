@@ -6,6 +6,8 @@ import { getRecommendations } from '../../api/mentors'
 import { updateMyProfile } from '../../api/profiles'
 import type { ProfileResponse } from '../../api/profiles'
 import { MentorCard } from '../../components/MentorCard'
+import { RequestModal } from '../../components/RequestModal'
+import type { RequestTarget } from '../../components/RequestModal'
 import { Avatar } from '../../components/ui/Avatar'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
@@ -22,10 +24,8 @@ const MATCH_ROWS = [
   ['style', 'Стиль'],
 ] as const
 
-/** Сколько карточек видно сразу, не считая лучшего совпадения */
 const FIRST_VISIBLE = 4
 
-/** Анкета → «Python, SQL · 2 ч в неделю · найти стажировку или работу за 3–6 мес.» */
 function profileSummary(profile?: ProfileResponse) {
   if (!profile) return ''
   const goal = GOALS.find((item) => item.value === profile.main_goals?.[0])?.title
@@ -44,6 +44,7 @@ function profileSummary(profile?: ProfileResponse) {
 
 export function StudentCabinet() {
   const [showAll, setShowAll] = useState(false)
+  const [requestTo, setRequestTo] = useState<RequestTarget | null>(null)
   const profile = useMyProfile()
   const recommendations = useQuery({
     queryKey: ['recommendations'],
@@ -159,8 +160,7 @@ export function StudentCabinet() {
           <p>{bestFacts}</p>
 
           <div className={styles.featuredActions}>
-            {/* TODO: шаг 5 — открыть окно заявки */}
-            <Button>Отправить заявку</Button>
+            <Button onClick={() => setRequestTo(best)}>Отправить заявку</Button>
             <Button variant="secondary" to={bestUrl}>
               Профиль
             </Button>
@@ -189,13 +189,7 @@ export function StudentCabinet() {
       {visible.length > 0 ? (
         <section className={styles.mentorGrid}>
           {visible.map((mentor) => (
-            <MentorCard
-              key={mentor.id}
-              mentor={mentor}
-              onRequest={() => {
-                
-              }}
-            />
+            <MentorCard key={mentor.id} mentor={mentor} onRequest={() => setRequestTo(mentor)} />
           ))}
         </section>
       ) : null}
@@ -205,6 +199,8 @@ export function StudentCabinet() {
           Показать ещё {rest.length - FIRST_VISIBLE} из подборки <ChevronRight size={16} />
         </button>
       ) : null}
+
+      {requestTo ? <RequestModal mentor={requestTo} onClose={() => setRequestTo(null)} /> : null}
     </div>
   )
 }
