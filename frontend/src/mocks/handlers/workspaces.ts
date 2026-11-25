@@ -44,7 +44,7 @@ function personOf(user: MockUser) {
   return user.role === 'mentor' ? mentorRef(MENTOR_ID_BY_USER[user.id]) : studentRef(user.id)
 }
 
-const jitsiLink = (ws: MockWorkspace) => `https://meet.jit.si/kurator-${ws.id}`
+const jitsiLink = (ws: MockWorkspace) => `https://meet.jit.si/cosmomentor-${ws.id}`
 
 function meetingResponse(meeting: MockMeeting, ws: MockWorkspace, user: MockUser) {
   const { reviews, ...rest } = meeting
