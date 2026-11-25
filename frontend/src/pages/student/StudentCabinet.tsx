@@ -6,10 +6,13 @@ import { getRecommendations } from '../../api/mentors'
 import { updateMyProfile } from '../../api/profiles'
 import type { ProfileResponse } from '../../api/profiles'
 import { MentorCard } from '../../components/MentorCard'
+import { RequestModal } from '../../components/RequestModal'
+import type { RequestTarget } from '../../components/RequestModal'
 import { Avatar } from '../../components/ui/Avatar'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { useMyProfile } from '../../hooks/useMyProfile'
+import { useRequestedMentorIds } from '../../hooks/useRequestedMentorIds'
 import { EXPERIENCE_LABEL, formatRating } from '../../lib/labels'
 import { plural } from '../../lib/plural'
 import { GOALS } from '../onboarding/goals'
@@ -22,10 +25,8 @@ const MATCH_ROWS = [
   ['style', 'Стиль'],
 ] as const
 
-/** Сколько карточек видно сразу, не считая лучшего совпадения */
 const FIRST_VISIBLE = 4
 
-/** Анкета → «Python, SQL · 2 ч в неделю · найти стажировку или работу за 3–6 мес.» */
 function profileSummary(profile?: ProfileResponse) {
   if (!profile) return ''
   const goal = GOALS.find((item) => item.value === profile.main_goals?.[0])?.title
@@ -44,7 +45,9 @@ function profileSummary(profile?: ProfileResponse) {
 
 export function StudentCabinet() {
   const [showAll, setShowAll] = useState(false)
+  const [requestTo, setRequestTo] = useState<RequestTarget | null>(null)
   const profile = useMyProfile()
+  const requested = useRequestedMentorIds()
   const recommendations = useQuery({
     queryKey: ['recommendations'],
     queryFn: getRecommendations,
@@ -110,7 +113,6 @@ export function StudentCabinet() {
               Смягчить фильтры в каталоге
             </Link>
           </div>
-          {/* TODO: неделя 5 — «Уточнить анкету», когда появится страница профиля */}
         </section>
       </div>
     )
@@ -120,6 +122,7 @@ export function StudentCabinet() {
   const visible = showAll ? rest : rest.slice(0, FIRST_VISIBLE)
   const bestName = `${best.first_name} ${best.last_name}`
   const bestUrl = `/student/mentors/${best.id}`
+  const bestRequested = requested.has(best.id)
   const bestFacts = [
     best.job_title,
     best.experience ? `опыт ${EXPERIENCE_LABEL[best.experience]}` : null,
@@ -138,7 +141,6 @@ export function StudentCabinet() {
         </div>
 
         <div className={styles.headingActions}>
-          {/* TODO: неделя 5 — «Уточнить анкету», когда появится страница профиля */}
           <Button variant="secondary" size="md" to="/student/catalog">
             <SlidersHorizontal size={16} />
             Каталог с фильтрами
@@ -159,8 +161,9 @@ export function StudentCabinet() {
           <p>{bestFacts}</p>
 
           <div className={styles.featuredActions}>
-            {/* TODO: шаг 5 — открыть окно заявки */}
-            <Button>Отправить заявку</Button>
+            <Button disabled={bestRequested} onClick={() => setRequestTo(best)}>
+              {bestRequested ? 'Заявка отправлена' : 'Отправить заявку'}
+            </Button>
             <Button variant="secondary" to={bestUrl}>
               Профиль
             </Button>
@@ -192,9 +195,8 @@ export function StudentCabinet() {
             <MentorCard
               key={mentor.id}
               mentor={mentor}
-              onRequest={() => {
-                
-              }}
+              requested={requested.has(mentor.id)}
+              onRequest={() => setRequestTo(mentor)}
             />
           ))}
         </section>
@@ -205,6 +207,8 @@ export function StudentCabinet() {
           Показать ещё {rest.length - FIRST_VISIBLE} из подборки <ChevronRight size={16} />
         </button>
       ) : null}
+
+      {requestTo ? <RequestModal mentor={requestTo} onClose={() => setRequestTo(null)} /> : null}
     </div>
   )
 }

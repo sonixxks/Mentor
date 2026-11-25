@@ -5,12 +5,15 @@ import { useState } from 'react'
 import { getMentors } from '../../api/mentors'
 import type { MentorFilters, MentorSort } from '../../api/mentors'
 import { MentorCard } from '../../components/MentorCard'
+import { RequestModal } from '../../components/RequestModal'
+import type { RequestTarget } from '../../components/RequestModal'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Slider } from '../../components/ui/Slider'
 import { Tag } from '../../components/ui/Tag'
 import { useDebounce } from '../../hooks/useDebounce'
+import { useRequestedMentorIds } from '../../hooks/useRequestedMentorIds'
 import { useSkills } from '../../hooks/useSkills'
 import { plural } from '../../lib/plural'
 import styles from './StudentCatalog.module.css'
@@ -41,7 +44,6 @@ const DEFAULTS = {
 
 type FiltersState = typeof DEFAULTS
 
-/** Пустое поле → undefined (фильтр не отправляем), иначе число */
 const toNumber = (value: string) => (value.trim() === '' ? undefined : Number(value))
 
 export function StudentCatalog() {
@@ -49,9 +51,11 @@ export function StudentCatalog() {
   const [limit, setLimit] = useState(PAGE_SIZE)
   const [showAllSkills, setShowAllSkills] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [requestTo, setRequestTo] = useState<RequestTarget | null>(null)
 
   const query = useDebounce(state.query)
   const skillsQuery = useSkills()
+  const requested = useRequestedMentorIds()
 
   function update(patch: Partial<FiltersState>) {
     setState((prev) => ({ ...prev, ...patch }))
@@ -91,7 +95,6 @@ export function StudentCatalog() {
 
   const allSkills = skillsQuery.data ?? []
   const visibleSkills = showAllSkills ? allSkills : allSkills.slice(0, SKILLS_VISIBLE)
-  // Выбранные навыки видны всегда, даже если список свёрнут
   const shownSkills = [...new Set([...state.skills, ...visibleSkills])]
 
   return (
@@ -147,9 +150,8 @@ export function StudentCatalog() {
                   <MentorCard
                     key={mentor.id}
                     mentor={mentor}
-                    onRequest={() => {
-                      // TODO: шаг 5 — открыть окно заявки
-                    }}
+                    requested={requested.has(mentor.id)}
+                    onRequest={() => setRequestTo(mentor)}
                   />
                 ))}
               </div>
@@ -282,6 +284,8 @@ export function StudentCatalog() {
           <span className={styles.switch} aria-hidden="true" />
         </label>
       </aside>
+
+      {requestTo ? <RequestModal mentor={requestTo} onClose={() => setRequestTo(null)} /> : null}
     </div>
   )
 }

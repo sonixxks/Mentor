@@ -11,10 +11,11 @@ import styles from './MentorCard.module.css'
 
 type MentorCardProps = {
   mentor: MentorSummary
+  requested?: boolean
   onRequest: () => void
 }
 
-export function MentorCard({ mentor, onRequest }: MentorCardProps) {
+export function MentorCard({ mentor, requested = false, onRequest }: MentorCardProps) {
   const name = `${mentor.first_name} ${mentor.last_name}`
   const profileUrl = `/student/mentors/${mentor.id}`
   const experience = mentor.experience ? EXPERIENCE_LABEL[mentor.experience] : null
@@ -55,8 +56,8 @@ export function MentorCard({ mentor, onRequest }: MentorCardProps) {
         <strong>{formatPrice(mentor.hourly_rate)}</strong>
       </div>
 
-      <Button size="sm" fullWidth onClick={onRequest} disabled={noSlots}>
-        {noSlots ? 'Мест нет' : 'Отправить заявку'}
+      <Button size="sm" fullWidth onClick={onRequest} disabled={noSlots || requested}>
+        {requested ? 'Заявка отправлена' : noSlots ? 'Мест нет' : 'Отправить заявку'}
       </Button>
     </Card>
   )

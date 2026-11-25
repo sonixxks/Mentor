@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { CheckCircle2, ShieldCheck, Star } from 'lucide-react'
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { getMentor, getMentorReviews } from '../../../api/mentors'
+import { RequestModal } from '../../../components/RequestModal'
 import { Button } from '../../../components/ui/Button'
 import { Tag } from '../../../components/ui/Tag'
 import {
@@ -32,6 +34,7 @@ function reviewDate(iso: string) {
 
 export function MentorProfilePage() {
   const { id = '' } = useParams()
+  const [requestOpen, setRequestOpen] = useState(false)
   const mentor = useQuery({ queryKey: ['mentor', id], queryFn: () => getMentor(id) })
   const reviews = useQuery({
     queryKey: ['mentor', id, 'reviews'],
@@ -81,8 +84,7 @@ export function MentorProfilePage() {
             {m.reviews_count > 0 ? <span>{reviewsLabel(m.reviews_count)}</span> : null}
           </span>
 
-          {/* TODO: шаг 5 — открыть окно заявки */}
-          <Button size="lg" fullWidth disabled={noSlots}>
+          <Button size="lg" fullWidth disabled={noSlots} onClick={() => setRequestOpen(true)}>
             {noSlots ? 'Мест нет' : 'Отправить заявку'}
           </Button>
         </section>
@@ -236,6 +238,8 @@ export function MentorProfilePage() {
           </section>
         </div>
       </div>
+
+      {requestOpen ? <RequestModal mentor={m} onClose={() => setRequestOpen(false)} /> : null}
     </div>
   )
 }
