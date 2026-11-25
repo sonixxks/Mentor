@@ -119,3 +119,7 @@ export function getMentorReviews(id: string, page = 1) {
 export function getMyMentorStats() {
   return apiFetch<MentorStats>('/mentors/me/stats')
 }
+
+export function getMyReviews(limit = 3) {
+  return apiFetch<Page<Review>>(`/mentors/me/reviews?limit=${limit}`)
+}

@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import type { TaskStatus, TaskStatusUpdate } from '../../api/workspaces'
-import { MENTORS } from '../data/mentors'
+import { MENTORS, REVIEWS } from '../data/mentors'
 import { MENTOR_ID_BY_USER } from '../data/requests'
 import { saveStore, store } from '../data/workspaces'
 import type { MockMeeting, MockTask, MockWorkspace } from '../data/workspaces'
@@ -146,6 +146,56 @@ export const workspaceHandlers = [
       completed_pairs: mine.length - active,
       meetings_this_month: meetings.length,
     })
+  }),
+
+  http.get(`${API}/mentors/me/reviews`, ({ request }) => {
+    const user = currentUser(request)
+    if (!user) return unauthorized()
+    if (user.role !== 'mentor') return error(403, 'FORBIDDEN', 'Mentors only')
+    const items = REVIEWS[MENTOR_ID_BY_USER[user.id]] ?? []
+    const limit = Number(new URL(request.url).searchParams.get('limit') ?? 10)
+    return HttpResponse.json({ total: items.length, page: 1, items: items.slice(0, limit) })
+  }),
+
+  http.get(`${API}/calendar`, ({ request }) => {
+    const user = currentUser(request)
+    if (!user) return unauthorized()
+
+    const params = new URL(request.url).searchParams
+    const start = Date.parse(`${params.get('from')}T00:00:00+05:00`)
+    const end = Date.parse(`${params.get('to')}T23:59:59+05:00`)
+    if (Number.isNaN(start) || Number.isNaN(end) || end < start) {
+      return error(400, 'VALIDATION_ERROR', 'from and to must be valid dates')
+    }
+    if (end - start > 62 * DAY) {
+      return error(400, 'VALIDATION_ERROR', 'Period must be at most 62 days')
+    }
+
+    const mine = store.workspaces.filter((ws) => isMember(user, ws))
+    const inRange = (iso: string) => {
+      const time = Date.parse(iso)
+      return time >= start && time <= end
+    }
+
+    const meetings = store.meetings
+      .filter((m) => inRange(m.start_time))
+      .sort((x, y) => x.start_time.localeCompare(y.start_time))
+      .flatMap((m) => {
+        const ws = mine.find((w) => w.id === m.workspace_id)
+        return ws ? [meetingResponse(m, ws, user)] : []
+      })
+
+    const task_deadlines = store.tasks
+      .filter((t) => inRange(t.deadline_at) && mine.some((ws) => ws.id === t.workspace_id))
+      .map((t) => ({
+        task_id: t.id,
+        workspace_id: t.workspace_id,
+        title: t.title,
+        deadline_at: t.deadline_at,
+        status: t.status,
+      }))
+
+    return HttpResponse.json({ meetings, task_deadlines, partners_availability: [] })
   }),
 
   http.get(`${API}/workspaces`, ({ request }) => {
