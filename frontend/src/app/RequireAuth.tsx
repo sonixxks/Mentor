@@ -8,8 +8,9 @@ type RequireAuthProps = {
 
 export function RequireAuth({ roles }: RequireAuthProps) {
   const role = getRole()
+  const token = getToken()
 
-  if (!getToken() || !role) return <Navigate to="/login" replace />
+  if (!token || !role) return <Navigate to="/login" replace />
   if (!roles.includes(role)) return <Navigate to={homeByRole[role]} replace />
 
   return <Outlet />

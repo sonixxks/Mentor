@@ -2,14 +2,14 @@ import { X } from 'lucide-react'
 import { Segmented } from '../../../components/ui/Segmented'
 import { Select } from '../../../components/ui/Select'
 import { Tag } from '../../../components/ui/Tag'
-import { SKILLS } from '../skills'
+import { useSkills } from '../../../hooks/useSkills'
 import type { SkillLevel, StudentAnswers } from '../types'
 import styles from '../Onboarding.module.css'
 
 const LEVELS = [
-  { value: 'beginner', label: 'Новичок' },
-  { value: 'confident', label: 'Уверенно' },
-  { value: 'pro', label: 'Профи' },
+  { value: '1', label: 'Новичок' },
+  { value: '2', label: 'Уверенно' },
+  { value: '3', label: 'Профи' },
 ]
 
 type SkillsStepProps = {
@@ -18,6 +18,9 @@ type SkillsStepProps = {
 }
 
 export function SkillsStep({ value, update }: SkillsStepProps) {
+  const skillsQuery = useSkills()
+  const allSkills = skillsQuery.data ?? []
+
   const { targetSkills, currentSkills } = value
 
   function toggleTarget(name: string) {
@@ -30,7 +33,7 @@ export function SkillsStep({ value, update }: SkillsStepProps) {
 
   function addCurrent(name: string) {
     if (!name) return
-    update({ currentSkills: [...currentSkills, { name, level: 'beginner' }] })
+    update({ currentSkills: [...currentSkills, { name, level: 1 }] })
   }
 
   function setLevel(name: string, level: SkillLevel) {
@@ -45,14 +48,24 @@ export function SkillsStep({ value, update }: SkillsStepProps) {
     update({ currentSkills: currentSkills.filter((skill) => skill.name !== name) })
   }
 
-  const available = SKILLS.filter((name) => !currentSkills.some((skill) => skill.name === name))
+  const available = allSkills.filter(
+    (name) => !currentSkills.some((skill) => skill.name === name),
+  )
+
+  if (skillsQuery.isPending) {
+    return <p className={styles.hint}>Загружаем список навыков...</p>
+  }
+
+  if (skillsQuery.isError) {
+    return <p className={styles.error}>Не удалось загрузить список навыков</p>
+  }
 
   return (
     <>
       <div className={styles.field}>
         <span className={styles.label}>Хочу развить</span>
         <div className={styles.tags}>
-          {SKILLS.map((name) => (
+          {allSkills.map((name) => (
             <Tag
               key={name}
               selected={targetSkills.includes(name)}
@@ -73,8 +86,8 @@ export function SkillsStep({ value, update }: SkillsStepProps) {
               <div className={styles.level}>
                 <Segmented
                   options={LEVELS}
-                  value={skill.level}
-                  onChange={(level) => setLevel(skill.name, level as SkillLevel)}
+                  value={String(skill.level)}
+                  onChange={(level) => setLevel(skill.name, Number(level) as SkillLevel)}
                 />
               </div>
               <button

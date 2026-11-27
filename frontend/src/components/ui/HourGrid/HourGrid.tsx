@@ -53,7 +53,7 @@ type HourGridProps = {
   to?: number
 }
 
-export function HourGrid({ label, value, onChange, from = 8, to = 23 }: HourGridProps) {
+export function HourGrid({ label, value, onChange, from = 8, to = 22 }: HourGridProps) {
   const hours = Array.from({ length: to - from }, (_, i) => from + i)
   const painting = useRef<'add' | 'remove' | null>(null)
 

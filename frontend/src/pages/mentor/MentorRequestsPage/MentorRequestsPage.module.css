@@ -1,0 +1,153 @@
+.page {
+  max-width: 880px;
+  padding: var(--space-32);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-20);
+}
+
+.error {
+  margin: 0;
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-field);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.item {
+  padding: var(--space-20) var(--space-24);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.info {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.meta {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.facts {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.letter {
+  margin: 0;
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-field);
+  background: var(--color-bg-subtle);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-secondary);
+}
+
+.reason {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-danger);
+}
+
+.actions {
+  padding-top: var(--space-12);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-12);
+  border-top: 1px solid var(--color-border-default);
+}
+
+.waiting {
+  margin: 0;
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--color-border-default);
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.state {
+  padding: var(--space-48) var(--space-24);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-12);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.state p {
+  margin: 0;
+  max-width: 440px;
+}
+
+.stateTitle {
+  margin: 0;
+  font: 400 22px/28px var(--font-display);
+  color: var(--color-text-primary);
+}
+
+.confirmText {
+  margin: 0;
+  line-height: 22px;
+  color: var(--color-text-secondary);
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-12);
+}
+
+@media (max-width: 767px) {
+  .page {
+    padding: var(--space-20) var(--space-16);
+  }
+
+  .item {
+    padding: var(--space-16);
+  }
+
+  .head {
+    flex-wrap: wrap;
+  }
+
+  .actions > *,
+  .confirmActions > * {
+    flex: 1;
+  }
+}

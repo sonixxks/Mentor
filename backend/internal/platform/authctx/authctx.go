@@ -1,6 +1,8 @@
 package authctx
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 
 	"github.com/sonixxks/Mentor/backend/internal/user"
@@ -11,12 +13,13 @@ type Principal struct {
 	Role   user.Role
 }
 
-type PrincipalCtxKey struct{}
+type principalKey struct{}
 
-// func PutPrincipalInContext() context.Context {
+func WithPrincipal(ctx context.Context, p Principal) context.Context {
+	return context.WithValue(ctx, principalKey{}, p)
+}
 
-// }
-
-// func GetPrincipalFromContext() (Principal, bool) {
-
-// }
+func PrincipalFrom(ctx context.Context) (Principal, bool) {
+	p, ok := ctx.Value(principalKey{}).(Principal)
+	return p, ok
+}

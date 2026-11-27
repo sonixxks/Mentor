@@ -1,9 +1,7 @@
 import { ChoiceCard } from '../../../components/ui/ChoiceCard'
 import { HourGrid } from '../../../components/ui/HourGrid'
-import { Select } from '../../../components/ui/Select'
 import { Slider } from '../../../components/ui/Slider'
 import { plural } from '../../../lib/plural'
-import { TIMEZONES } from '../../../lib/timezones'
 import type { StudentAnswers } from '../types'
 import styles from '../Onboarding.module.css'
 import { COMMUNICATION_STYLES } from '../styles'
@@ -25,20 +23,13 @@ export function TimeStep({ value, update }: TimeStepProps) {
         format={(n) => (n === 8 ? '8+ часов' : plural(n, ['час', 'часа', 'часов']))}
       />
 
-      <div className={styles.grid2}>
-        <Select
-          label="Часовой пояс"
-          options={TIMEZONES}
-          value={value.timezone}
-          onChange={(e) => update({ timezone: e.target.value })}
-        />
-      </div>
-
       <HourGrid
         label="Удобное время"
         value={value.schedule}
         onChange={(schedule) => update({ schedule })}
       />
+
+      <p className={styles.hint}>Время по Екатеринбургу (UTC+5)</p>
 
       <div className={styles.field}>
         <span className={styles.label}>Стиль общения</span>

@@ -20,13 +20,12 @@ type TokenParser interface {
 
 // WithPrincipal кладёт пользователя в контекст (нужно и для тестов обработчиков).
 func WithPrincipal(ctx context.Context, p authctx.Principal) context.Context {
-	return context.WithValue(ctx, authctx.PrincipalCtxKey{}, p)
+	return authctx.WithPrincipal(ctx, p)
 }
 
 // PrincipalFrom достаёт пользователя, которого положил RequireAuth или OptionalAuth.
 func PrincipalFrom(ctx context.Context) (authctx.Principal, bool) {
-	p, ok := ctx.Value(authctx.PrincipalCtxKey{}).(authctx.Principal)
-	return p, ok
+	return authctx.PrincipalFrom(ctx)
 }
 
 type Auth struct {

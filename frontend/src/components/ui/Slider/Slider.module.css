@@ -8,16 +8,18 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: var(--space-12);
+  gap: 8px;
+}
+
+.value {
+  font: 400 12px var(--font-display);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .label {
   font-size: 14px;
   font-weight: 600;
-}
-
-.value {
-  font: 400 16px var(--font-display);
 }
 
 .range {

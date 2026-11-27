@@ -2,8 +2,7 @@ import { X } from 'lucide-react'
 import { Segmented } from '../../../components/ui/Segmented'
 import { Select } from '../../../components/ui/Select'
 import { Tag } from '../../../components/ui/Tag'
-import { SKILLS } from '../skills'
-import { GOALS } from '../goals'
+import { useSkills } from '../../../hooks/useSkills'
 import type { MentorAnswers, MentorSkill } from '../types'
 import styles from '../Onboarding.module.css'
 
@@ -12,16 +11,31 @@ const LEVELS = [
   { value: 'expert', label: 'Эксперт' },
 ]
 
+const HELP_TOPICS = [
+  { value: 'interview_prep', title: 'Подготовка к собеседованию' },
+  { value: 'code_review', title: 'Разбор кода' },
+  { value: 'portfolio', title: 'Портфолио и проекты' },
+  { value: 'career_growth', title: 'Развитие карьеры' },
+  { value: 'change_direction', title: 'Смена направления' },
+  { value: 'soft_skills', title: 'Развитие soft skills' },
+  { value: 'first_job_in_it', title: 'Первая работа в IT' },
+]
+
 type SkillsStepProps = {
   value: MentorAnswers
   update: (patch: Partial<MentorAnswers>) => void
 }
 
 export function SkillsStep({ value, update }: SkillsStepProps) {
+  const skillsQuery = useSkills()
+  const availableSkills = skillsQuery.data ?? []
+  const loading = skillsQuery.isPending
+  const loadError = skillsQuery.isError ? 'Не удалось загрузить список навыков' : ''
+
   const { skills, goals } = value
 
   function addSkill(name: string) {
-    if (!name) return
+    if (!name || skills.some((skill) => skill.name === name)) return
     update({ skills: [...skills, { name, level: 'confident' }] })
   }
 
@@ -41,16 +55,20 @@ export function SkillsStep({ value, update }: SkillsStepProps) {
     })
   }
 
-  const available = SKILLS.filter((name) => !skills.some((skill) => skill.name === name))
+  const available = availableSkills.filter(
+    (name) => !skills.some((skill) => skill.name === name),
+  )
 
   return (
     <>
       <div className={styles.field}>
         <span className={styles.label}>Навыки, которыми делюсь</span>
+
         <div className={styles.list}>
           {skills.map((skill) => (
             <div key={skill.name} className={styles.skillRow}>
               <span className={styles.skillName}>{skill.name}</span>
+
               <div className={styles.level}>
                 <Segmented
                   options={LEVELS}
@@ -58,6 +76,7 @@ export function SkillsStep({ value, update }: SkillsStepProps) {
                   onChange={(level) => setLevel(skill.name, level as MentorSkill['level'])}
                 />
               </div>
+
               <button
                 type="button"
                 className={styles.remove}
@@ -69,7 +88,11 @@ export function SkillsStep({ value, update }: SkillsStepProps) {
             </div>
           ))}
 
-          {available.length > 0 ? (
+          {loading ? <p className={styles.hint}>Загружаем список навыков...</p> : null}
+
+          {loadError ? <p className={styles.error}>{loadError}</p> : null}
+
+          {!loading && !loadError && available.length > 0 ? (
             <div className={styles.addSkill}>
               <Select
                 label="Добавить навык"
@@ -80,19 +103,24 @@ export function SkillsStep({ value, update }: SkillsStepProps) {
               />
             </div>
           ) : null}
+
+          {!loading && !loadError && available.length === 0 && skills.length > 0 ? (
+            <p className={styles.hint}>Все доступные навыки уже добавлены</p>
+          ) : null}
         </div>
       </div>
 
       <div className={styles.field}>
         <span className={styles.label}>С чем помогаю</span>
+
         <div className={styles.tags}>
-          {GOALS.map((goal) => (
+          {HELP_TOPICS.map((topic) => (
             <Tag
-              key={goal.value}
-              selected={goals.includes(goal.value)}
-              onClick={() => toggleGoal(goal.value)}
+              key={topic.value}
+              selected={goals.includes(topic.value)}
+              onClick={() => toggleGoal(topic.value)}
             >
-              {goal.title}
+              {topic.title}
             </Tag>
           ))}
         </div>

@@ -57,14 +57,7 @@ func SendValidationErrors(w http.ResponseWriter, err error, statusCode int) {
 }
 
 func SendError(w http.ResponseWriter, statusCode int, resp ErrorResponse) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		slog.Error("Failed to encode Error response",
-			"error", err)
-		return
-	}
+	SendJSON(w, statusCode, resp)
 }
 
 func SendJSON(w http.ResponseWriter, statusCode int, resp any) {
@@ -76,4 +69,12 @@ func SendJSON(w http.ResponseWriter, statusCode int, resp any) {
 			"error", err)
 		return
 	}
+}
+
+func SendInternalError(w http.ResponseWriter) {
+	SendError(w, http.StatusInternalServerError, ErrorResponse{ErrorCode: ErrInternal, Message: "internal server error"})
+}
+
+func SendBadRequest(w http.ResponseWriter, message string, details ...string) {
+	SendError(w, http.StatusBadRequest, ErrorResponse{ErrorCode: ErrValidation, Message: message, Details: details})
 }

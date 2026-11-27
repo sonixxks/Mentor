@@ -1,8 +1,7 @@
 import { emptySchedule } from '../../components/ui/HourGrid'
 import type { Schedule } from '../../components/ui/HourGrid'
-import { detectTimezone } from '../../lib/timezones'
 
-export type SkillLevel = 'beginner' | 'confident' | 'pro'
+export type SkillLevel = 1 | 2 | 3
 
 export type StudentSkill = { name: string; level: SkillLevel }
 
@@ -26,11 +25,11 @@ export type StudentAnswers = {
   currentSkills: StudentSkill[]
   // Шаг 3 · Цели
   goals: string[]
-  durationMonths: number
+  durationFrom: number
+  durationTo: number
   success: string
   // Шаг 4 · Время и стиль
   hoursPerWeek: number
-  timezone: string
   schedule: Schedule
   style: string
 }
@@ -50,10 +49,10 @@ export const initialStudent: StudentAnswers = {
   targetSkills: [],
   currentSkills: [],
   goals: [],
-  durationMonths: 3,
+  durationFrom: 3,
+  durationTo: 6,
   success: '',
   hoursPerWeek: 2,
-  timezone: detectTimezone(),
   schedule: emptySchedule(),
   style: '',
 }
@@ -67,6 +66,7 @@ export type MentorAnswers = {
   middleName: string
   position: string
   company: string
+  selfEmployed: boolean
   experience: string
   about: string
   links: string[]
@@ -82,7 +82,6 @@ export type MentorAnswers = {
   price: string
   // Шаг 4 · Время и стиль
   hoursPerWeek: number
-  timezone: string
   schedule: Schedule
   style: string
   visible: boolean
@@ -94,6 +93,7 @@ export const initialMentor: MentorAnswers = {
   middleName: '',
   position: '',
   company: '',
+  selfEmployed: false,
   experience: '',
   about: '',
   links: [''],
@@ -106,7 +106,6 @@ export const initialMentor: MentorAnswers = {
   paid: false,
   price: '',
   hoursPerWeek: 4,
-  timezone: detectTimezone(),
   schedule: emptySchedule(),
   style: '',
   visible: true,

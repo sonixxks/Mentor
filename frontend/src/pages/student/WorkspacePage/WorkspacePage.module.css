@@ -1,0 +1,616 @@
+.page {
+  padding: var(--space-32);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--space-24);
+  align-items: start;
+}
+
+.main,
+.side {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+
+.state {
+  padding: var(--space-48) var(--space-24);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-12);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.state p {
+  margin: 0;
+  max-width: 460px;
+}
+
+.stateTitle {
+  margin: 0;
+  font: 400 22px/28px var(--font-display);
+  color: var(--color-text-primary);
+}
+
+.muted {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-danger);
+}
+
+.goal {
+  padding: var(--space-24) var(--space-32);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-32);
+  align-items: end;
+  border-radius: var(--radius-xl);
+  background: var(--gradient-accent);
+}
+
+.goalMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.goalLabel {
+  font-size: 15px;
+  color: var(--color-text-on-accent-soft);
+}
+
+.goalPercent {
+  font: 300 64px/1 var(--font-display);
+}
+
+.goalSide {
+  padding-bottom: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.goalBar {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.22);
+  overflow: hidden;
+}
+
+.goalBar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-text-primary);
+  transition: width 0.3s;
+}
+
+.goalFacts {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-16);
+  flex-wrap: wrap;
+  font-size: 14px;
+  color: var(--color-text-on-accent-soft);
+}
+
+.tasks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.tasksHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-12);
+  flex-wrap: wrap;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.task {
+  padding: var(--space-16) var(--space-20);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+}
+
+.taskActive {
+  border-color: var(--color-accent-primary);
+}
+
+.taskHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.check {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--color-border-stronger);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkDone {
+  border-color: transparent;
+  background: var(--color-accent-primary);
+}
+
+.taskTitle {
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.taskTitle:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.taskName {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.taskMeta {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.overdue {
+  color: var(--color-danger);
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.2s;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.toggle {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.toggle:hover {
+  background: var(--color-bg-subtle);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 2px;
+}
+
+.taskBody {
+  padding-left: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-secondary);
+}
+
+.mentorComment {
+  margin: 0;
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-field);
+  background: var(--color-warning-bg);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.mentorComment b {
+  color: var(--color-warning);
+}
+
+.submitForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.fieldLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.submitRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-12);
+}
+
+.submitRow > div:first-child {
+  min-width: 0;
+  flex: 1;
+}
+
+.artifact {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: 14px;
+  color: var(--color-accent-light);
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.artifact:hover {
+  text-decoration: underline;
+}
+
+.card {
+  padding: var(--space-24);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-card);
+}
+
+.partner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.partnerInfo {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.partnerName {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.partnerName:hover {
+  color: var(--color-accent-light);
+}
+
+.chatButton,
+.iconButton {
+  width: var(--control-md);
+  height: var(--control-md);
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-primary);
+}
+
+.chatButton {
+  background: var(--color-accent-primary);
+}
+
+.chatButton:hover {
+  background: var(--color-accent-hover);
+}
+
+.iconButton {
+  border: 1px solid var(--color-border-strong);
+}
+
+.iconButton:hover {
+  background: var(--color-bg-subtle);
+}
+
+.meetingTime {
+  font: 400 24px/30px var(--font-display);
+}
+
+.secondary {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-secondary);
+}
+
+.meetingActions {
+  display: flex;
+  gap: var(--space-12);
+}
+
+.join {
+  min-height: var(--control-md);
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  border-radius: var(--radius-full);
+  background: var(--color-accent-primary);
+  color: var(--color-text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.join:hover {
+  background: var(--color-accent-hover);
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--color-text-muted);
+  word-break: break-all;
+}
+
+.chatButton:focus-visible,
+.iconButton:focus-visible,
+.join:focus-visible {
+  outline: 2px solid var(--color-accent-light);
+  outline-offset: 3px;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.comments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.comment {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+}
+
+.commentBody {
+  min-width: 0;
+  padding: var(--space-8) var(--space-12);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: var(--radius-field);
+  background: var(--color-bg-subtle);
+}
+
+.commentMeta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.commentText {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.commentForm {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+}
+
+.commentForm > div:first-child {
+  min-width: 0;
+  flex: 1;
+}
+
+.sendButton {
+  width: var(--control-lg);
+  height: var(--control-lg);
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-accent-primary);
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.sendButton:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+
+.sendButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.reviewCard {
+  border-color: rgba(255, 181, 71, 0.5);
+}
+
+.reviewCard > button {
+  align-self: flex-start;
+}
+
+.stars {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.starButton {
+  padding: 2px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.starButton:focus-visible {
+  outline: 2px solid var(--color-warning);
+  outline-offset: 2px;
+}
+
+.star {
+  color: var(--color-text-muted);
+  transition: color 0.15s;
+}
+
+.starOn {
+  color: var(--color-warning);
+}
+
+.file {
+  padding: var(--space-12);
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  border-radius: var(--radius-field);
+  background: var(--color-bg-subtle);
+  color: inherit;
+  text-decoration: none;
+}
+
+.file:hover {
+  background: var(--color-bg-card-raised);
+}
+
+.file:focus-visible {
+  outline: 2px solid var(--color-accent-light);
+  outline-offset: 2px;
+}
+
+.fileIcon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-navy);
+  color: var(--color-text-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fileInfo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fileName {
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1279px) {
+  .page {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .side {
+    order: -1;
+  }
+
+  .goal {
+    grid-template-columns: 1fr;
+    gap: var(--space-16);
+  }
+}
+
+@media (max-width: 767px) {
+  .page {
+    padding: var(--space-20) var(--space-16);
+  }
+
+  .goal {
+    padding: var(--space-20);
+  }
+
+  .goalPercent {
+    font-size: 48px;
+  }
+
+  .taskHead {
+    flex-wrap: wrap;
+  }
+
+  .taskTitle {
+    flex-basis: calc(100% - 80px);
+  }
+
+  .taskBody {
+    padding-left: 0;
+  }
+
+  .submitRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
