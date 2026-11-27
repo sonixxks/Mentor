@@ -10,9 +10,31 @@ import (
 	"github.com/sonixxks/Mentor/backend/internal/platform/validation"
 )
 
+type ErrCode string
+
+const (
+	ErrValidation          ErrCode = "VALIDATION_ERROR"
+	ErrUnauthorized        ErrCode = "UNAUTHORIZED"
+	ErrForbidden           ErrCode = "FORBIDDEN"
+	ErrNotFound            ErrCode = "NOT_FOUND"
+	ErrConflict            ErrCode = "CONFLICT"
+	ErrInvalidCode         ErrCode = "INVALID_CODE"
+	ErrTooManyRequests     ErrCode = "TOO_MANY_REQUESTS"
+	ErrRoleRequired        ErrCode = "ROLE_REQUIRED"
+	ErrProfileIncomplete   ErrCode = "PROFILE_INCOMPLETE"
+	ErrMentorLimitReached  ErrCode = "MENTOR_LIMIT_REACHED"
+	ErrRequestLimitReached ErrCode = "REQUEST_LIMIT_REACHED"
+	ErrDuplicateRequest    ErrCode = "DUPLICATE_REQUEST"
+	ErrReviewExists        ErrCode = "REVIEW_EXISTS"
+	ErrInvalidToken        ErrCode = "INVALID_TOKEN"
+	ErrInvalidTransition   ErrCode = "INVALID_TRANSITION"
+	ErrInternal            ErrCode = "INTERNAL_ERROR"
+)
+
 type ErrorResponse struct {
-	Error  string            `json:"error"`
-	Fields map[string]string `json:"fields,omitempty"`
+	ErrorCode ErrCode  `json:"error_code"`
+	Message   string   `json:"message"`
+	Details   []string `json:"details,omitempty"`
 }
 
 func SendValidationErrors(w http.ResponseWriter, err error, statusCode int) {
@@ -20,16 +42,16 @@ func SendValidationErrors(w http.ResponseWriter, err error, statusCode int) {
 	if !errors.As(err, &validationErrs) {
 		slog.Error("Invalid request",
 			"error", err)
-		SendError(w, http.StatusInternalServerError, ErrorResponse{Error: "Internal server error"})
+		SendError(w, http.StatusInternalServerError, ErrorResponse{ErrorCode: ErrInternal, Message: "Internal server error"})
 		return
 	}
 
-	fields := make(map[string]string, len(validationErrs))
+	details := make([]string, 0, len(validationErrs))
 	for _, fe := range validationErrs {
-		fields[fe.Field()] = validation.ValidationMessage(fe)
+		details = append(details, fe.Field()+validation.ValidationMessage(fe))
 	}
 
-	resp := ErrorResponse{Error: "validation error", Fields: fields}
+	resp := ErrorResponse{ErrorCode: ErrValidation, Message: "Validation failed", Details: details}
 
 	SendError(w, statusCode, resp)
 }

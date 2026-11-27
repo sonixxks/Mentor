@@ -18,11 +18,11 @@ func ReadBodyWithLimit(w http.ResponseWriter, r *http.Request, req any) bool {
 		var maxBytesErr *http.MaxBytesError
 
 		if errors.As(decodeErr, &maxBytesErr) {
-			http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
+			SendError(w, http.StatusRequestEntityTooLarge, ErrorResponse{ErrorCode: ErrValidation, Message: "request body too large"})
 			return false
 		}
 
-		SendError(w, http.StatusBadRequest, ErrorResponse{Error: "parsing request body failed"})
+		SendError(w, http.StatusBadRequest, ErrorResponse{ErrorCode: ErrValidation, Message: "parsing request body failed"})
 		return false
 	}
 	return true

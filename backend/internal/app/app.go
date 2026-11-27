@@ -10,10 +10,16 @@ import (
 
 	"net/http"
 
+	"github.com/sonixxks/Mentor/backend/internal/auth"
 	"github.com/sonixxks/Mentor/backend/internal/config"
+	"github.com/sonixxks/Mentor/backend/internal/platform/mailer"
+	"github.com/sonixxks/Mentor/backend/internal/platform/memory"
 	"github.com/sonixxks/Mentor/backend/internal/platform/postgres"
+	"github.com/sonixxks/Mentor/backend/internal/platform/validation"
+	"github.com/sonixxks/Mentor/backend/internal/profile"
 	"github.com/sonixxks/Mentor/backend/internal/transport/rest"
 	"github.com/sonixxks/Mentor/backend/internal/transport/rest/statusroutes"
+	"github.com/sonixxks/Mentor/backend/internal/user"
 )
 
 func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
@@ -37,14 +43,62 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 		"host", pool.Config().ConnConfig.Host,
 		"port", pool.Config().ConnConfig.Port,
 	)
+
+	//Settings
+	codeSettings := auth.CodeSettings{
+		TTL:            cfg.ConfirmationCode.ExpiresInSeconds,
+		ResendInterval: cfg.ConfirmationCode.ResendAfterSeconds,
+		MaxAttempts:    cfg.ConfirmationCode.MaxAttempts,
+		HashSecret:     []byte(cfg.ConfirmationCode.OTPSecret),
+	}
+	refreshTokenSettings := auth.RefreshTokenSettings{
+		RefreshTTL:         cfg.RefreshTokens.RefreshTTL,
+		RefreshRememberTTL: cfg.RefreshTokens.RefreshRememberTTL,
+	}
+
+	//TransactionManager
+	transactionManager := postgres.NewTransactionManager(pool)
+
 	//validator
-	//validate := validation.NewValidator()
+	validate := validation.NewValidator()
+
+	//repositories
+	userRepository := user.NewRepository(transactionManager)
+	profileRepository := profile.NewRepository(transactionManager)
+
+	//TokenManager
+	tokenManager, err := auth.NewTokenManager(cfg.JWT.Secret, cfg.JWT.AccessTTL, cfg.JWT.Issuer)
+	if err != nil {
+		return fmt.Errorf("create token manager: %w", err)
+	}
+
+	//Hasher
+	hasher, err := auth.NewDefaultPasswordHasher()
+	if err != nil {
+		return fmt.Errorf("create password hasher: %w", err)
+	}
 
 	//services
 
+	authService := auth.NewService(
+		auth.ServiceDeps{
+			Users:         userRepository,
+			Profiles:      profileRepository,
+			Tokens:        tokenManager,
+			RefreshTokens: memory.NewRefreshTokenStore(),
+			Hasher:        hasher,
+			Transactions:  transactionManager,
+			Registrations: memory.NewRegistrationStore(),
+			ResendLimiter: memory.NewResendLimiter(),
+			Mailer:        mailer.NewLogMailer(lg),
+			Codes:         auth.RandomCodeGenerator{},
+		},
+		auth.Settings{CodeSettings: codeSettings, RefreshTokenSettings: refreshTokenSettings},
+	)
+
 	//handlers register
 	serviceHandlers := make([]rest.ServiceHandler, 0)
-	//serviceHandlers = append(serviceHandlers, auth.NewHandler(validate, lg, &authService))
+	serviceHandlers = append(serviceHandlers, auth.NewHandler(validate, lg, authService))
 
 	//router
 	router := rest.NewRouter(serviceHandlers, "v1")
