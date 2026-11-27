@@ -201,14 +201,14 @@ func (h *Handler) requestDocuments(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) sendError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ErrWorkspaceNotFound), errors.Is(err, ErrProfileNotFound):
-		httpx.SendAPIError(w, http.StatusNotFound, httpx.CodeNotFound, err.Error())
+		httpx.SendError(w, http.StatusNotFound, httpx.ErrorResponse{ErrorCode: httpx.ErrNotFound, Message: err.Error()})
 	case errors.Is(err, ErrInvalidStatus), errors.Is(err, ErrInvalidTarget),
 		errors.Is(err, ErrCommentRequired), errors.Is(err, ErrCommentTooLong):
 		httpx.SendBadRequest(w, err.Error())
 	case errors.Is(err, ErrMentorLimit):
-		httpx.SendAPIError(w, http.StatusConflict, httpx.CodeMentorLimitReached, err.Error())
+		httpx.SendError(w, http.StatusConflict, httpx.ErrorResponse{ErrorCode: httpx.ErrMentorLimitReached, Message: err.Error()})
 	case errors.Is(err, ErrNoHelpRequest), errors.Is(err, ErrNotMentor), errors.Is(err, ErrNotPending):
-		httpx.SendAPIError(w, http.StatusConflict, httpx.CodeConflict, err.Error())
+		httpx.SendError(w, http.StatusConflict, httpx.ErrorResponse{ErrorCode: httpx.ErrConflict, Message: err.Error()})
 	default:
 		h.log.Error("curator handler", "error", err)
 		httpx.SendInternalError(w)
@@ -218,7 +218,7 @@ func (h *Handler) sendError(w http.ResponseWriter, err error) {
 func pathID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
-		httpx.SendAPIError(w, http.StatusNotFound, httpx.CodeNotFound, "resource not found")
+		httpx.SendError(w, http.StatusNotFound, httpx.ErrorResponse{ErrorCode: httpx.ErrNotFound, Message: "resource not found"})
 		return uuid.Nil, false
 	}
 	return id, true

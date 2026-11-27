@@ -47,7 +47,7 @@ TEST_DATABASE_URL=postgres://user:pass@127.0.0.1:5432/mentor_test?sslmode=disabl
   `auth.Optional` — для публичных ручек, которые авторизованным отвечают иначе (каталог). Пользователь
   достаётся через `middleware.PrincipalFrom(ctx)`.
 - **Ошибки** — формат контракта `{"error_code": "...", "message": "...", "details": [...]}`:
-  `httpx.SendAPIError`, `httpx.SendBadRequest`; коды — константы `httpx.Code*`.
+  `httpx.SendError`, `httpx.SendBadRequest`; коды — константы `httpx.Err*`.
 - **Пагинация** — `httpx.ParsePage(query, defaultLimit, maxLimit)`, ответ `{"total", "page", "items"}`.
 - **Транзакции** — правила, которые нельзя нарушить параллельными запросами (лимит 3 заявок ученика,
   свободные места наставника при подтверждении заявки или возврате пары в работу), проверяются под

@@ -82,7 +82,7 @@ func (h *Handler) listMentors(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) getMentor(w http.ResponseWriter, r *http.Request) {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
-		httpx.SendAPIError(w, http.StatusNotFound, httpx.CodeNotFound, ErrMentorNotFound.Error())
+		httpx.SendError(w, http.StatusNotFound, httpx.ErrorResponse{ErrorCode: httpx.ErrNotFound, Message: ErrMentorNotFound.Error()})
 		return
 	}
 
@@ -97,7 +97,7 @@ func (h *Handler) getMentor(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) listReviews(w http.ResponseWriter, r *http.Request) {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
-		httpx.SendAPIError(w, http.StatusNotFound, httpx.CodeNotFound, ErrMentorNotFound.Error())
+		httpx.SendError(w, http.StatusNotFound, httpx.ErrorResponse{ErrorCode: httpx.ErrNotFound, Message: ErrMentorNotFound.Error()})
 		return
 	}
 	page, err := httpx.ParsePage(r.URL.Query(), 10, 50)
@@ -144,7 +144,7 @@ func (h *Handler) listSkills(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) sendError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ErrMentorNotFound):
-		httpx.SendAPIError(w, http.StatusNotFound, httpx.CodeNotFound, err.Error())
+		httpx.SendError(w, http.StatusNotFound, httpx.ErrorResponse{ErrorCode: httpx.ErrNotFound, Message: err.Error()})
 	default:
 		h.log.Error("catalog handler", "error", err)
 		httpx.SendInternalError(w)

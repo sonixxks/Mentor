@@ -12,10 +12,11 @@ const (
 	Student Role = "student"
 	Mentor  Role = "mentor"
 	Curator Role = "curator"
+	Admin   Role = "admin"
 )
 
 func (r Role) Valid() bool {
-	if r != Student && r != Mentor && r != Curator {
+	if r != Student && r != Mentor && r != Curator && r != Admin {
 		return false
 	}
 	return true
@@ -29,16 +30,16 @@ func (r Role) Registrable() bool {
 }
 
 type User struct {
-	UserID    uuid.UUID
-	Role      Role
-	FirstName string
-	LastName  string
-	Email     string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID                uuid.UUID
+	Role              Role
+	Email             string
+	YandexID          *string
+	ConsentAt         *time.Time
+	PasswordChangedAt *time.Time
+	CreatedAt         time.Time
 }
 
 type UserRecord struct {
 	User User
-	Hash string
+	Hash *string
 }
