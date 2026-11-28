@@ -45,7 +45,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if body.MentorID == uuid.Nil {
-		httpx.SendBadRequest(w, "validation error", "mentor_id: field is required")
+		httpx.SendBadRequest(w, httpx.MsgValidation, "mentor_id: field is required")
 		return
 	}
 
@@ -75,7 +75,7 @@ func (h *Handler) createByCurator(w http.ResponseWriter, r *http.Request) {
 		details = append(details, "mentor_id: field is required")
 	}
 	if len(details) > 0 {
-		httpx.SendBadRequest(w, "validation error", details...)
+		httpx.SendBadRequest(w, httpx.MsgValidation, details...)
 		return
 	}
 
@@ -95,13 +95,13 @@ func (h *Handler) listMine(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	page, err := httpx.ParsePage(q, 10, 50)
 	if err != nil {
-		httpx.SendBadRequest(w, "validation error", err.Error())
+		httpx.SendBadRequest(w, httpx.MsgValidation, err.Error())
 		return
 	}
 	p := httpx.NewQueryParser(q)
 	group := Group(p.Enum("group", "", string(GroupActive), string(GroupArchive)))
 	if errs := p.Errors(); len(errs) > 0 {
-		httpx.SendBadRequest(w, "validation error", errs...)
+		httpx.SendBadRequest(w, httpx.MsgValidation, errs...)
 		return
 	}
 
@@ -122,7 +122,7 @@ func (h *Handler) listForCurator(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	page, err := httpx.ParsePage(q, 10, 50)
 	if err != nil {
-		httpx.SendBadRequest(w, "validation error", err.Error())
+		httpx.SendBadRequest(w, httpx.MsgValidation, err.Error())
 		return
 	}
 
@@ -148,7 +148,7 @@ func (h *Handler) listForCurator(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) changeStatus(w http.ResponseWriter, r *http.Request) {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
-		httpx.SendBadRequest(w, "validation error", err.Error())
+		httpx.SendBadRequest(w, httpx.MsgValidation, err.Error())
 		return
 	}
 
@@ -177,22 +177,22 @@ func (h *Handler) changeStatus(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) sendError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ErrForbidden):
-		httpx.SendAPIError(w, http.StatusForbidden, httpx.CodeForbidden, err.Error())
+		httpx.SendError(w, http.StatusForbidden, httpx.ErrorResponse{ErrorCode: httpx.ErrForbidden, Message: err.Error()})
 	case errors.Is(err, ErrNotFound), errors.Is(err, ErrMentorNotFound),
 		errors.Is(err, ErrPackageNotFound), errors.Is(err, ErrStudentNotFound):
-		httpx.SendAPIError(w, http.StatusNotFound, httpx.CodeNotFound, err.Error())
+		httpx.SendError(w, http.StatusNotFound, httpx.ErrorResponse{ErrorCode: httpx.ErrNotFound, Message: err.Error()})
 	case errors.Is(err, ErrInvalidStatus), errors.Is(err, ErrReasonRequired), errors.Is(err, ErrCoverLetterLength):
 		httpx.SendBadRequest(w, err.Error())
 	case errors.Is(err, ErrInvalidTransition):
-		httpx.SendAPIError(w, http.StatusConflict, httpx.CodeInvalidTransition, err.Error())
+		httpx.SendError(w, http.StatusConflict, httpx.ErrorResponse{ErrorCode: httpx.ErrInvalidTransition, Message: err.Error()})
 	case errors.Is(err, ErrRequestLimit):
-		httpx.SendAPIError(w, http.StatusConflict, httpx.CodeRequestLimitReached, err.Error())
+		httpx.SendError(w, http.StatusConflict, httpx.ErrorResponse{ErrorCode: httpx.ErrRequestLimitReached, Message: err.Error()})
 	case errors.Is(err, ErrDuplicate):
-		httpx.SendAPIError(w, http.StatusConflict, httpx.CodeDuplicateRequest, err.Error())
+		httpx.SendError(w, http.StatusConflict, httpx.ErrorResponse{ErrorCode: httpx.ErrDuplicateRequest, Message: err.Error()})
 	case errors.Is(err, ErrMentorLimit):
-		httpx.SendAPIError(w, http.StatusConflict, httpx.CodeMentorLimitReached, err.Error())
+		httpx.SendError(w, http.StatusConflict, httpx.ErrorResponse{ErrorCode: httpx.ErrMentorLimitReached, Message: err.Error()})
 	case errors.Is(err, ErrStatusConflict), errors.Is(err, ErrNoHelpRequest):
-		httpx.SendAPIError(w, http.StatusConflict, httpx.CodeConflict, err.Error())
+		httpx.SendError(w, http.StatusConflict, httpx.ErrorResponse{ErrorCode: httpx.ErrConflict, Message: err.Error()})
 	default:
 		h.log.Error("requests handler", "error", err)
 		httpx.SendInternalError(w)

@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/sonixxks/Mentor/backend/internal/auth"
+	"github.com/sonixxks/Mentor/backend/internal/platform/authctx"
 	"github.com/sonixxks/Mentor/backend/internal/user"
 )
 
@@ -29,9 +30,9 @@ func TestRequire(t *testing.T) {
 	userID := uuid.New()
 	studentToken, _, _ := tokens.IssueAccessToken(userID, user.Student)
 
-	var gotPrincipal auth.Principal
+	var gotPrincipal authctx.Principal
 	handler := mw.Require(func(w http.ResponseWriter, r *http.Request) {
-		gotPrincipal, _ = PrincipalFrom(r.Context())
+		gotPrincipal, _ = authctx.PrincipalFrom(r.Context())
 		w.WriteHeader(http.StatusNoContent)
 	}, user.Student, user.Mentor)
 

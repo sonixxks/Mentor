@@ -1,4 +1,3 @@
-// Package middleware содержит обёртки для обработчиков REST API.
 package middleware
 
 import (
@@ -9,26 +8,24 @@ import (
 	"strings"
 
 	"github.com/sonixxks/Mentor/backend/internal/auth"
+	"github.com/sonixxks/Mentor/backend/internal/platform/authctx"
 	"github.com/sonixxks/Mentor/backend/internal/transport/rest/httpx"
 	"github.com/sonixxks/Mentor/backend/internal/user"
 )
 
 // TokenParser — проверка access-токена (реализует auth.TokenManager).
 type TokenParser interface {
-	ParseAccessToken(token string) (auth.Principal, error)
+	ParseAccessToken(token string) (authctx.Principal, error)
 }
 
-type principalKey struct{}
-
 // WithPrincipal кладёт пользователя в контекст (нужно и для тестов обработчиков).
-func WithPrincipal(ctx context.Context, p auth.Principal) context.Context {
-	return context.WithValue(ctx, principalKey{}, p)
+func WithPrincipal(ctx context.Context, p authctx.Principal) context.Context {
+	return authctx.WithPrincipal(ctx, p)
 }
 
 // PrincipalFrom достаёт пользователя, которого положил RequireAuth или OptionalAuth.
-func PrincipalFrom(ctx context.Context) (auth.Principal, bool) {
-	p, ok := ctx.Value(principalKey{}).(auth.Principal)
-	return p, ok
+func PrincipalFrom(ctx context.Context) (authctx.Principal, bool) {
+	return authctx.PrincipalFrom(ctx)
 }
 
 type Auth struct {
@@ -45,22 +42,22 @@ func (a *Auth) Require(next http.HandlerFunc, roles ...user.Role) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, ok := bearerToken(r)
 		if !ok {
-			httpx.SendAPIError(w, http.StatusUnauthorized, httpx.CodeUnauthorized, "missing bearer token")
+			httpx.SendError(w, http.StatusUnauthorized, httpx.ErrorResponse{ErrorCode: httpx.ErrUnauthorized, Message: "требуется авторизация"})
 			return
 		}
 
 		principal, err := a.tokens.ParseAccessToken(token)
 		if err != nil {
-			msg := "invalid token"
+			msg := "недействительный токен"
 			if errors.Is(err, auth.ErrTokenExpired) {
-				msg = "token expired"
+				msg = "срок действия токена истёк"
 			}
-			httpx.SendAPIError(w, http.StatusUnauthorized, httpx.CodeUnauthorized, msg)
+			httpx.SendError(w, http.StatusUnauthorized, httpx.ErrorResponse{ErrorCode: httpx.ErrUnauthorized, Message: msg})
 			return
 		}
 
 		if len(roles) > 0 && !slices.Contains(roles, principal.Role) {
-			httpx.SendAPIError(w, http.StatusForbidden, httpx.CodeForbidden, "action is not allowed for this role")
+			httpx.SendError(w, http.StatusForbidden, httpx.ErrorResponse{ErrorCode: httpx.ErrForbidden, Message: "действие недоступно для вашей роли"})
 			return
 		}
 

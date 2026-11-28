@@ -24,7 +24,11 @@ func Pool(t *testing.T) *pgxpool.Pool {
 
 	dsn := os.Getenv(envURL)
 	if dsn == "" {
-		t.Skip(envURL + " is not set, skipping integration test")
+		// Так же называется переменная в тестах auth и транзакций.
+		dsn = os.Getenv("TEST_DB_DSN")
+	}
+	if dsn == "" {
+		t.Skip(envURL + " (или TEST_DB_DSN) не задана, интеграционный тест пропущен")
 	}
 
 	pool, err := pgxpool.New(context.Background(), dsn)

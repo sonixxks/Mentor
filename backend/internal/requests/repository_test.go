@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/sonixxks/Mentor/backend/internal/matching"
 	"github.com/sonixxks/Mentor/backend/internal/notifications"
 	"github.com/sonixxks/Mentor/backend/internal/platform/postgres/pgtest"
 	"github.com/sonixxks/Mentor/backend/internal/user"
@@ -107,7 +108,7 @@ func TestRepositoryAccept(t *testing.T) {
 	pool := pgtest.Pool(t)
 	fx := pgtest.NewFixtures(t, pool)
 	repo := NewPostgresRepository(pool)
-	svc := NewService(repo)
+	svc := NewService(repo, nil)
 	ctx := context.Background()
 
 	st := fx.Student("Анна", "Петрова")
@@ -166,5 +167,35 @@ func TestRepositoryAccept(t *testing.T) {
 	// Устаревшее состояние: статус уже сменился.
 	if _, err := repo.UpdateStatus(ctx, reqID, StatusPending, StatusCancelled, nil, nil); !errors.Is(err, ErrStatusConflict) {
 		t.Fatalf("stale update: error = %v, want %v", err, ErrStatusConflict)
+	}
+}
+
+func TestListMineMatchForMentor(t *testing.T) {
+	pool := pgtest.Pool(t)
+	fx := pgtest.NewFixtures(t, pool)
+	svc := NewService(NewPostgresRepository(pool), matching.NewRepository(pool))
+	ctx := context.Background()
+
+	st := fx.Student("Анна", "Петрова")
+	mentorID := fx.Mentor("Иван", "Смирнов", pgtest.MentorOpts{})
+	reqID := fx.Request(st, mentorID, "pending")
+
+	views, _, err := svc.ListMine(ctx, Actor{UserID: mentorID, Role: user.Mentor}, GroupActive, 10, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Навыки Go и SQL совпали, цель покрыта, слоты не заданы у ученика, стиль разный.
+	if len(views) != 1 || views[0].Match == nil || views[0].Match.Breakdown.Skills != 100 || views[0].Match.Breakdown.Goals != 100 {
+		t.Fatalf("mentor view match = %+v", views[0].Match)
+	}
+
+	views, _, err = svc.ListMine(ctx, Actor{UserID: st, Role: user.Student}, GroupActive, 10, 0)
+	if err != nil || views[0].Match != nil {
+		t.Fatalf("student must not see match: %+v, %v", views, err)
+	}
+
+	view, err := svc.ChangeStatus(ctx, Actor{UserID: mentorID, Role: user.Mentor}, ChangeStatusInput{RequestID: reqID, To: StatusApprovedByMentor})
+	if err != nil || view.Match == nil {
+		t.Fatalf("status change response for mentor: %+v, %v", view.Match, err)
 	}
 }

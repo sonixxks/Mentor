@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/sonixxks/Mentor/backend/internal/platform/authctx"
 	"github.com/sonixxks/Mentor/backend/internal/user"
 )
 
@@ -20,11 +21,6 @@ type TokenManager struct {
 	accessTTL time.Duration
 	issuer    string
 	now       func() time.Time
-}
-
-type Principal struct {
-	UserID uuid.UUID
-	Role   user.Role
 }
 
 func NewTokenManager(secret string, accessTTL time.Duration, issuer string) (*TokenManager, error) {
@@ -64,7 +60,7 @@ func (m *TokenManager) IssueAccessToken(userID uuid.UUID, role user.Role) (strin
 	return signedJwt, claims.ExpiresAt.Time, nil
 }
 
-func (m *TokenManager) ParseAccessToken(token string) (Principal, error) {
+func (m *TokenManager) ParseAccessToken(token string) (authctx.Principal, error) {
 	parsed, err := jwt.ParseWithClaims(
 		token,
 		&Claims{},
@@ -76,23 +72,23 @@ func (m *TokenManager) ParseAccessToken(token string) (Principal, error) {
 	)
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			return Principal{}, ErrTokenExpired
+			return authctx.Principal{}, ErrTokenExpired
 		}
-		return Principal{}, ErrInvalidToken
+		return authctx.Principal{}, ErrInvalidToken
 	}
 
 	claims, ok := parsed.Claims.(*Claims)
 	if !ok || !parsed.Valid {
-		return Principal{}, ErrInvalidToken
+		return authctx.Principal{}, ErrInvalidToken
 	}
 	subjectUuid, err := uuid.Parse(claims.Subject)
 	if err != nil {
-		return Principal{}, ErrInvalidToken
+		return authctx.Principal{}, ErrInvalidToken
 	}
 	if !claims.Role.Valid() {
-		return Principal{}, ErrInvalidToken
+		return authctx.Principal{}, ErrInvalidToken
 	}
 
-	return Principal{UserID: subjectUuid, Role: claims.Role}, nil
+	return authctx.Principal{UserID: subjectUuid, Role: claims.Role}, nil
 
 }

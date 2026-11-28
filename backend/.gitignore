@@ -2,6 +2,7 @@
 .env*
 !.env.example
 
+/docs
 /bin
 
 *.exe
@@ -13,3 +14,4 @@ coverage.*
 .vscode/
 .idea/
 .DS_Store
+uploads/

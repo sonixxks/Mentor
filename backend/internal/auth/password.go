@@ -18,6 +18,10 @@ type PasswordHasher struct {
 	fakeHash string
 }
 
+func NewDefaultPasswordHasher() (*PasswordHasher, error) {
+	return NewPasswordHasher(DefaultCost)
+}
+
 func NewPasswordHasher(cost int) (*PasswordHasher, error) {
 	if cost < bcrypt.MinCost || cost > bcrypt.MaxCost {
 		return nil, fmt.Errorf("bcrypt cost must be between %d and %d", bcrypt.MinCost, bcrypt.MaxCost)

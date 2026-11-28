@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sonixxks/Mentor/backend/internal/matching"
 	"github.com/sonixxks/Mentor/backend/internal/user"
 )
 
@@ -77,6 +78,9 @@ type Person struct {
 	AvatarURL *string
 }
 
+// MatchInfo — совместимость ученика с наставником.
+type MatchInfo = matching.Info
+
 // View — заявка с данными для экранов: участники, программа, воркспейс.
 type View struct {
 	Request
@@ -85,6 +89,8 @@ type View struct {
 	Mentor              Person
 	ServicePackageTitle *string
 	WorkspaceID         *uuid.UUID
+	// Match — только в ответах наставнику.
+	Match *MatchInfo
 }
 
 // ListFilter — выборка заявок. Пустые поля не ограничивают выдачу.

@@ -10,11 +10,11 @@ import (
 )
 
 var (
-	ErrWorkspaceNotFound = errors.New("workspace not found")
-	ErrNotMember         = errors.New("only members of the pair can use the chat")
-	ErrEmptyMessage      = errors.New("message must contain text or file_id")
-	ErrTextTooLong       = errors.New("message text is too long")
-	ErrFileNotFound      = errors.New("file not found in this workspace")
+	ErrWorkspaceNotFound = errors.New("пара не найдена")
+	ErrNotMember         = errors.New("чат доступен только участникам пары")
+	ErrEmptyMessage      = errors.New("сообщение должно содержать текст или файл")
+	ErrTextTooLong       = errors.New("сообщение длиннее 4000 символов")
+	ErrFileNotFound      = errors.New("файл не найден в базе знаний пары")
 )
 
 const (

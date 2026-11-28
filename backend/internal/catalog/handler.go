@@ -39,7 +39,7 @@ func (h *Handler) listMentors(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	page, err := httpx.ParsePage(q, 10, 50)
 	if err != nil {
-		httpx.SendBadRequest(w, "validation error", err.Error())
+		httpx.SendBadRequest(w, httpx.MsgValidation, err.Error())
 		return
 	}
 
@@ -62,7 +62,7 @@ func (h *Handler) listMentors(w http.ResponseWriter, r *http.Request) {
 		f.HasFreeSlots = *free
 	}
 	if errs := p.Errors(); len(errs) > 0 {
-		httpx.SendBadRequest(w, "validation error", errs...)
+		httpx.SendBadRequest(w, httpx.MsgValidation, errs...)
 		return
 	}
 
@@ -82,7 +82,7 @@ func (h *Handler) listMentors(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) getMentor(w http.ResponseWriter, r *http.Request) {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
-		httpx.SendAPIError(w, http.StatusNotFound, httpx.CodeNotFound, ErrMentorNotFound.Error())
+		httpx.SendError(w, http.StatusNotFound, httpx.ErrorResponse{ErrorCode: httpx.ErrNotFound, Message: ErrMentorNotFound.Error()})
 		return
 	}
 
@@ -97,12 +97,12 @@ func (h *Handler) getMentor(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) listReviews(w http.ResponseWriter, r *http.Request) {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
-		httpx.SendAPIError(w, http.StatusNotFound, httpx.CodeNotFound, ErrMentorNotFound.Error())
+		httpx.SendError(w, http.StatusNotFound, httpx.ErrorResponse{ErrorCode: httpx.ErrNotFound, Message: ErrMentorNotFound.Error()})
 		return
 	}
 	page, err := httpx.ParsePage(r.URL.Query(), 10, 50)
 	if err != nil {
-		httpx.SendBadRequest(w, "validation error", err.Error())
+		httpx.SendBadRequest(w, httpx.MsgValidation, err.Error())
 		return
 	}
 
@@ -129,7 +129,7 @@ func (h *Handler) listSkills(w http.ResponseWriter, r *http.Request) {
 		q.Limit = *limit
 	}
 	if errs := p.Errors(); len(errs) > 0 {
-		httpx.SendBadRequest(w, "validation error", errs...)
+		httpx.SendBadRequest(w, httpx.MsgValidation, errs...)
 		return
 	}
 
@@ -144,7 +144,7 @@ func (h *Handler) listSkills(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) sendError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ErrMentorNotFound):
-		httpx.SendAPIError(w, http.StatusNotFound, httpx.CodeNotFound, err.Error())
+		httpx.SendError(w, http.StatusNotFound, httpx.ErrorResponse{ErrorCode: httpx.ErrNotFound, Message: err.Error()})
 	default:
 		h.log.Error("catalog handler", "error", err)
 		httpx.SendInternalError(w)

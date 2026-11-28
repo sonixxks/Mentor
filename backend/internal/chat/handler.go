@@ -82,7 +82,7 @@ func (h *Handler) history(w http.ResponseWriter, r *http.Request) {
 	if raw := q.Get("before"); raw != "" {
 		t, err := time.Parse(time.RFC3339Nano, raw)
 		if err != nil {
-			httpx.SendBadRequest(w, "validation error", "before: must be an ISO 8601 date-time with offset")
+			httpx.SendBadRequest(w, httpx.MsgValidation, "before: нужна дата-время в формате ISO 8601 со смещением")
 			return
 		}
 		before = &t
@@ -93,7 +93,7 @@ func (h *Handler) history(w http.ResponseWriter, r *http.Request) {
 		limit = *l
 	}
 	if errs := p.Errors(); len(errs) > 0 {
-		httpx.SendBadRequest(w, "validation error", errs...)
+		httpx.SendBadRequest(w, httpx.MsgValidation, errs...)
 		return
 	}
 
@@ -143,9 +143,9 @@ func (h *Handler) markRead(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) sendError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ErrWorkspaceNotFound):
-		httpx.SendAPIError(w, http.StatusNotFound, httpx.CodeNotFound, err.Error())
+		httpx.SendError(w, http.StatusNotFound, httpx.ErrorResponse{ErrorCode: httpx.ErrNotFound, Message: err.Error()})
 	case errors.Is(err, ErrNotMember):
-		httpx.SendAPIError(w, http.StatusForbidden, httpx.CodeForbidden, err.Error())
+		httpx.SendError(w, http.StatusForbidden, httpx.ErrorResponse{ErrorCode: httpx.ErrForbidden, Message: err.Error()})
 	case errors.Is(err, ErrEmptyMessage), errors.Is(err, ErrTextTooLong), errors.Is(err, ErrFileNotFound):
 		httpx.SendBadRequest(w, err.Error())
 	default:
@@ -157,7 +157,7 @@ func (h *Handler) sendError(w http.ResponseWriter, err error) {
 func workspaceID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
-		httpx.SendAPIError(w, http.StatusNotFound, httpx.CodeNotFound, ErrWorkspaceNotFound.Error())
+		httpx.SendError(w, http.StatusNotFound, httpx.ErrorResponse{ErrorCode: httpx.ErrNotFound, Message: ErrWorkspaceNotFound.Error()})
 		return uuid.Nil, false
 	}
 	return id, true
