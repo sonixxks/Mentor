@@ -18,6 +18,7 @@ import { MentorRequestsPage } from '../pages/mentor/MentorRequestsPage'
 import { WorkspacePage } from '../pages/student/WorkspacePage'
 import { MentorDashboard } from '../pages/mentor/MentorDashboard'
 import { MentorStudentPage, MentorStudentsIndex } from '../pages/mentor/MentorStudentPage'
+import { ChatPage } from '../pages/chat/ChatPage'
 
 function RequireGuest() {
   const token = getToken()
@@ -80,6 +81,8 @@ export const router = createBrowserRouter([
           },
           { path: '/student/requests', element: <StudentRequestsPage /> },
           { path: '/student/workspace', element: <WorkspacePage /> },
+          { path: '/student/chat', element: <ChatPage /> },
+          { path: '/student/chat/:id', element: <ChatPage /> },
           { path: '/student/*', element: <ComingSoonPage /> },
         ],
       },
@@ -95,6 +98,8 @@ export const router = createBrowserRouter([
           { path: '/mentor/requests', element: <MentorRequestsPage /> },
           { path: '/mentor/students', element: <MentorStudentsIndex /> },
           { path: '/mentor/students/:id', element: <MentorStudentPage /> },
+          { path: '/mentor/chat', element: <ChatPage /> },
+          { path: '/mentor/chat/:id', element: <ChatPage /> },
           { path: '/mentor/*', element: <ComingSoonPage /> },
         ],
       },

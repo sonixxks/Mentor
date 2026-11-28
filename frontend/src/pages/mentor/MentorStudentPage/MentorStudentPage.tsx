@@ -114,7 +114,7 @@ export function MentorStudentPage() {
               <span style={{ width: `${ws.progress_percent}%` }} />
             </span>
             <strong className={styles.goalPercent}>{ws.progress_percent}%</strong>
-            <Button variant="secondary" size="sm" to="/mentor/chat">
+            <Button variant="secondary" size="sm" to={`/mentor/chat/${ws.id}`}>
               Чат
             </Button>
           </section>
