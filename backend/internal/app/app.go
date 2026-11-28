@@ -15,7 +15,6 @@ import (
 	"github.com/sonixxks/Mentor/backend/internal/chat"
 	"github.com/sonixxks/Mentor/backend/internal/config"
 	"github.com/sonixxks/Mentor/backend/internal/curator"
-	"github.com/sonixxks/Mentor/backend/internal/faq"
 	"github.com/sonixxks/Mentor/backend/internal/platform/mailer"
 	"github.com/sonixxks/Mentor/backend/internal/platform/memory"
 	"github.com/sonixxks/Mentor/backend/internal/platform/postgres"
@@ -106,10 +105,6 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 	catalogService := catalog.NewService(catalog.NewPostgresRepository(pool), nil)
 	curatorService := curator.NewService(curator.NewPostgresRepository(pool))
 	chatService := chat.NewService(chat.NewPostgresRepository(pool))
-	faqBot, err := faq.New()
-	if err != nil {
-		return fmt.Errorf("load faq: %w", err)
-	}
 
 	//handlers register
 	serviceHandlers := make([]rest.ServiceHandler, 0)
@@ -119,7 +114,6 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 		catalog.NewHandler(catalogService, authMiddleware, lg),
 		curator.NewHandler(curatorService, authMiddleware, lg),
 		chat.NewHandler(chatService, authMiddleware, lg),
-		faq.NewHandler(faqBot),
 	)
 
 	//router

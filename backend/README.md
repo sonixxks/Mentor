@@ -38,7 +38,6 @@ TEST_DATABASE_URL=postgres://user:pass@127.0.0.1:5432/mentor_test?sslmode=disabl
 | `internal/catalog` | каталог наставников с фильтрами, карточка, отзывы, словарь навыков | `GET /mentors`, `GET /mentors/{id}`, `GET /mentors/{id}/reviews`, `GET /skills` |
 | `internal/curator` | панель куратора: «светофор» пар, статус пары, сообщение паре, очереди помощи и верификации | `/curator/workspaces*`, `/curator/profiles*` |
 | `internal/chat` | чат внутри пары | `GET/POST /workspaces/{id}/messages`, `POST /workspaces/{id}/messages/read` |
-| `internal/faq` | FAQ-бот по ключевым словам, база в `internal/faq/faq.json` | `GET /faq`, `POST /faq/ask` |
 | `internal/notifications` | запись уведомлений (модули пишут их в своих транзакциях) | — |
 
 ### Общие договорённости
