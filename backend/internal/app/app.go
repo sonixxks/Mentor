@@ -16,6 +16,7 @@ import (
 	"github.com/sonixxks/Mentor/backend/internal/chat"
 	"github.com/sonixxks/Mentor/backend/internal/config"
 	"github.com/sonixxks/Mentor/backend/internal/curator"
+	"github.com/sonixxks/Mentor/backend/internal/matching"
 	"github.com/sonixxks/Mentor/backend/internal/platform/mailer"
 	"github.com/sonixxks/Mentor/backend/internal/platform/memory"
 	"github.com/sonixxks/Mentor/backend/internal/platform/postgres"
@@ -116,9 +117,9 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 		},
 		auth.Settings{CodeSettings: codeSettings, RefreshTokenSettings: refreshTokenSettings},
 	)
-	requestService := requests.NewService(requests.NewPostgresRepository(pool))
-	// Модуль подбора (процент совместимости) подключается вторым аргументом, пока nil.
-	catalogService := catalog.NewService(catalog.NewPostgresRepository(pool), nil)
+	matcher := matching.NewRepository(pool)
+	requestService := requests.NewService(requests.NewPostgresRepository(pool), matcher)
+	catalogService := catalog.NewService(catalog.NewPostgresRepository(pool), matcher)
 	curatorService := curator.NewService(curator.NewPostgresRepository(pool))
 	chatService := chat.NewService(chat.NewPostgresRepository(pool))
 

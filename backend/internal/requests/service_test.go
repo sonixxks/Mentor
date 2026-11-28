@@ -106,7 +106,7 @@ func TestChangeStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := newFakeRepo(tt.status)
-			svc := NewService(repo)
+			svc := NewService(repo, nil)
 
 			_, err := svc.ChangeStatus(context.Background(), tt.actor, ChangeStatusInput{
 				RequestID:       requestID,
@@ -126,7 +126,7 @@ func TestChangeStatus(t *testing.T) {
 func TestChangeStatusAcceptGoesThroughTransaction(t *testing.T) {
 	repo := newFakeRepo(StatusApprovedByMentor)
 
-	view, err := NewService(repo).ChangeStatus(context.Background(), student, ChangeStatusInput{RequestID: requestID, To: StatusAccepted})
+	view, err := NewService(repo, nil).ChangeStatus(context.Background(), student, ChangeStatusInput{RequestID: requestID, To: StatusAccepted})
 	if err != nil {
 		t.Fatalf("ChangeStatus() error = %v", err)
 	}
@@ -143,7 +143,7 @@ func TestChangeStatusAcceptGoesThroughTransaction(t *testing.T) {
 
 func TestChangeStatusReason(t *testing.T) {
 	repo := newFakeRepo(StatusPending)
-	_, err := NewService(repo).ChangeStatus(context.Background(), curator, ChangeStatusInput{
+	_, err := NewService(repo, nil).ChangeStatus(context.Background(), curator, ChangeStatusInput{
 		RequestID:       requestID,
 		To:              StatusRejectedByCurator,
 		RejectionReason: "  жалоба на спам  ",
@@ -160,7 +160,7 @@ func TestChangeStatusReason(t *testing.T) {
 
 	// Причина при одобрении не сохраняется.
 	repo = newFakeRepo(StatusPending)
-	_, err = NewService(repo).ChangeStatus(context.Background(), mentor, ChangeStatusInput{
+	_, err = NewService(repo, nil).ChangeStatus(context.Background(), mentor, ChangeStatusInput{
 		RequestID: requestID, To: StatusApprovedByMentor, RejectionReason: "лишнее",
 	})
 	if err != nil || repo.reason != nil {
@@ -174,17 +174,17 @@ func TestChangeStatusReason(t *testing.T) {
 func TestCreate(t *testing.T) {
 	ctx := context.Background()
 
-	if _, err := NewService(newFakeRepo(StatusPending)).Create(ctx, mentor, CreateInput{MentorID: uuid.New()}); !errors.Is(err, ErrForbidden) {
+	if _, err := NewService(newFakeRepo(StatusPending), nil).Create(ctx, mentor, CreateInput{MentorID: uuid.New()}); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("mentor creates request: error = %v, want %v", err, ErrForbidden)
 	}
 
 	long := strings.Repeat("я", MaxCoverLetterLen+1)
-	if _, err := NewService(newFakeRepo(StatusPending)).Create(ctx, student, CreateInput{MentorID: mentorID, CoverLetter: long}); !errors.Is(err, ErrCoverLetterLength) {
+	if _, err := NewService(newFakeRepo(StatusPending), nil).Create(ctx, student, CreateInput{MentorID: mentorID, CoverLetter: long}); !errors.Is(err, ErrCoverLetterLength) {
 		t.Fatalf("long cover letter: error = %v, want %v", err, ErrCoverLetterLength)
 	}
 
 	repo := newFakeRepo(StatusPending)
-	view, err := NewService(repo).Create(ctx, student, CreateInput{MentorID: mentorID, CoverLetter: "  Хочу в бэкенд  "})
+	view, err := NewService(repo, nil).Create(ctx, student, CreateInput{MentorID: mentorID, CoverLetter: "  Хочу в бэкенд  "})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -202,12 +202,12 @@ func TestCreate(t *testing.T) {
 func TestCreateByCurator(t *testing.T) {
 	ctx := context.Background()
 
-	if _, err := NewService(newFakeRepo(StatusPending)).CreateByCurator(ctx, student, CuratorCreateInput{}); !errors.Is(err, ErrForbidden) {
+	if _, err := NewService(newFakeRepo(StatusPending), nil).CreateByCurator(ctx, student, CuratorCreateInput{}); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("student uses curator route: error = %v, want %v", err, ErrForbidden)
 	}
 
 	repo := newFakeRepo(StatusPending)
-	if _, err := NewService(repo).CreateByCurator(ctx, curator, CuratorCreateInput{StudentID: studentID, MentorID: mentorID}); err != nil {
+	if _, err := NewService(repo, nil).CreateByCurator(ctx, curator, CuratorCreateInput{StudentID: studentID, MentorID: mentorID}); err != nil {
 		t.Fatalf("CreateByCurator() error = %v", err)
 	}
 	if repo.created.SuggestedBy == nil || *repo.created.SuggestedBy != curator.UserID {
@@ -222,7 +222,7 @@ func TestListMine(t *testing.T) {
 	ctx := context.Background()
 
 	repo := newFakeRepo(StatusPending)
-	if _, _, err := NewService(repo).ListMine(ctx, student, GroupActive, 10, 0); err != nil {
+	if _, _, err := NewService(repo, nil).ListMine(ctx, student, GroupActive, 10, 0); err != nil {
 		t.Fatal(err)
 	}
 	if repo.listFilter.StudentID == nil || *repo.listFilter.StudentID != studentID || repo.listFilter.MentorID != nil {
@@ -232,19 +232,19 @@ func TestListMine(t *testing.T) {
 		t.Fatalf("active group statuses = %v", repo.listFilter.Statuses)
 	}
 
-	if _, _, err := NewService(repo).ListMine(ctx, mentor, GroupArchive, 10, 0); err != nil {
+	if _, _, err := NewService(repo, nil).ListMine(ctx, mentor, GroupArchive, 10, 0); err != nil {
 		t.Fatal(err)
 	}
 	if repo.listFilter.MentorID == nil || *repo.listFilter.MentorID != mentorID || len(repo.listFilter.Statuses) != len(ArchiveStatuses) {
 		t.Fatalf("mentor filter = %+v", repo.listFilter)
 	}
 
-	if _, _, err := NewService(repo).ListMine(ctx, curator, GroupAll, 10, 0); !errors.Is(err, ErrForbidden) {
+	if _, _, err := NewService(repo, nil).ListMine(ctx, curator, GroupAll, 10, 0); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("curator ListMine: error = %v, want %v", err, ErrForbidden)
 	}
 
 	bad := Status("nope")
-	if _, _, err := NewService(repo).ListAll(ctx, curator, &bad, 10, 0); !errors.Is(err, ErrInvalidStatus) {
+	if _, _, err := NewService(repo, nil).ListAll(ctx, curator, &bad, 10, 0); !errors.Is(err, ErrInvalidStatus) {
 		t.Fatalf("ListAll bad status: error = %v", err)
 	}
 }
