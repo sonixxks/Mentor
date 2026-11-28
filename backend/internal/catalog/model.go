@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	ErrMentorNotFound = errors.New("mentor not found")
+	ErrMentorNotFound = errors.New("наставник не найден")
 )
 
 type Sort string

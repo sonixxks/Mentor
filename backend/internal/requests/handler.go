@@ -45,7 +45,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if body.MentorID == uuid.Nil {
-		httpx.SendBadRequest(w, "validation error", "mentor_id: field is required")
+		httpx.SendBadRequest(w, httpx.MsgValidation, "mentor_id: field is required")
 		return
 	}
 
@@ -75,7 +75,7 @@ func (h *Handler) createByCurator(w http.ResponseWriter, r *http.Request) {
 		details = append(details, "mentor_id: field is required")
 	}
 	if len(details) > 0 {
-		httpx.SendBadRequest(w, "validation error", details...)
+		httpx.SendBadRequest(w, httpx.MsgValidation, details...)
 		return
 	}
 
@@ -95,13 +95,13 @@ func (h *Handler) listMine(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	page, err := httpx.ParsePage(q, 10, 50)
 	if err != nil {
-		httpx.SendBadRequest(w, "validation error", err.Error())
+		httpx.SendBadRequest(w, httpx.MsgValidation, err.Error())
 		return
 	}
 	p := httpx.NewQueryParser(q)
 	group := Group(p.Enum("group", "", string(GroupActive), string(GroupArchive)))
 	if errs := p.Errors(); len(errs) > 0 {
-		httpx.SendBadRequest(w, "validation error", errs...)
+		httpx.SendBadRequest(w, httpx.MsgValidation, errs...)
 		return
 	}
 
@@ -122,7 +122,7 @@ func (h *Handler) listForCurator(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	page, err := httpx.ParsePage(q, 10, 50)
 	if err != nil {
-		httpx.SendBadRequest(w, "validation error", err.Error())
+		httpx.SendBadRequest(w, httpx.MsgValidation, err.Error())
 		return
 	}
 
@@ -148,7 +148,7 @@ func (h *Handler) listForCurator(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) changeStatus(w http.ResponseWriter, r *http.Request) {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
-		httpx.SendBadRequest(w, "validation error", err.Error())
+		httpx.SendBadRequest(w, httpx.MsgValidation, err.Error())
 		return
 	}
 

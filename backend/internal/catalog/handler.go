@@ -39,7 +39,7 @@ func (h *Handler) listMentors(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	page, err := httpx.ParsePage(q, 10, 50)
 	if err != nil {
-		httpx.SendBadRequest(w, "validation error", err.Error())
+		httpx.SendBadRequest(w, httpx.MsgValidation, err.Error())
 		return
 	}
 
@@ -62,7 +62,7 @@ func (h *Handler) listMentors(w http.ResponseWriter, r *http.Request) {
 		f.HasFreeSlots = *free
 	}
 	if errs := p.Errors(); len(errs) > 0 {
-		httpx.SendBadRequest(w, "validation error", errs...)
+		httpx.SendBadRequest(w, httpx.MsgValidation, errs...)
 		return
 	}
 
@@ -102,7 +102,7 @@ func (h *Handler) listReviews(w http.ResponseWriter, r *http.Request) {
 	}
 	page, err := httpx.ParsePage(r.URL.Query(), 10, 50)
 	if err != nil {
-		httpx.SendBadRequest(w, "validation error", err.Error())
+		httpx.SendBadRequest(w, httpx.MsgValidation, err.Error())
 		return
 	}
 
@@ -129,7 +129,7 @@ func (h *Handler) listSkills(w http.ResponseWriter, r *http.Request) {
 		q.Limit = *limit
 	}
 	if errs := p.Errors(); len(errs) > 0 {
-		httpx.SendBadRequest(w, "validation error", errs...)
+		httpx.SendBadRequest(w, httpx.MsgValidation, errs...)
 		return
 	}
 

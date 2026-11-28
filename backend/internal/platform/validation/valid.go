@@ -25,16 +25,20 @@ func NewValidator() *validator.Validate {
 func ValidationMessage(fe validator.FieldError) string {
 	switch fe.ActualTag() {
 	case "required":
-		return "field is required"
+		return "обязательное поле"
 	case "email":
-		return "must be a valid email"
+		return "некорректная почта"
 	case "min":
-		return "must be at least " + fe.Param() + " characters long"
+		return "не короче " + fe.Param() + " символов"
 	case "max":
-		return "must be at most " + fe.Param() + " characters long"
+		return "не длиннее " + fe.Param() + " символов"
 	case "oneof":
-		return "must be one of: " + fe.Param()
+		return "допустимые значения: " + fe.Param()
+	case "len":
+		return "должно быть ровно " + fe.Param() + " символов"
+	case "numeric":
+		return "только цифры"
 	default:
-		return "field is not valid"
+		return "некорректное значение"
 	}
 }

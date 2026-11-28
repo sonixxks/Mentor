@@ -82,7 +82,7 @@ func (h *Handler) history(w http.ResponseWriter, r *http.Request) {
 	if raw := q.Get("before"); raw != "" {
 		t, err := time.Parse(time.RFC3339Nano, raw)
 		if err != nil {
-			httpx.SendBadRequest(w, "validation error", "before: must be an ISO 8601 date-time with offset")
+			httpx.SendBadRequest(w, httpx.MsgValidation, "before: нужна дата-время в формате ISO 8601 со смещением")
 			return
 		}
 		before = &t
@@ -93,7 +93,7 @@ func (h *Handler) history(w http.ResponseWriter, r *http.Request) {
 		limit = *l
 	}
 	if errs := p.Errors(); len(errs) > 0 {
-		httpx.SendBadRequest(w, "validation error", errs...)
+		httpx.SendBadRequest(w, httpx.MsgValidation, errs...)
 		return
 	}
 

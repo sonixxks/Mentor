@@ -52,7 +52,7 @@ func (h *Handler) listWorkspaces(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	page, err := httpx.ParsePage(q, 10, 50)
 	if err != nil {
-		httpx.SendBadRequest(w, "validation error", err.Error())
+		httpx.SendBadRequest(w, httpx.MsgValidation, err.Error())
 		return
 	}
 	p := httpx.NewQueryParser(q)
@@ -64,7 +64,7 @@ func (h *Handler) listWorkspaces(w http.ResponseWriter, r *http.Request) {
 		Offset:     page.Offset(),
 	}
 	if errs := p.Errors(); len(errs) > 0 {
-		httpx.SendBadRequest(w, "validation error", errs...)
+		httpx.SendBadRequest(w, httpx.MsgValidation, errs...)
 		return
 	}
 
@@ -120,7 +120,7 @@ func (h *Handler) listProfiles(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	page, err := httpx.ParsePage(q, 10, 50)
 	if err != nil {
-		httpx.SendBadRequest(w, "validation error", err.Error())
+		httpx.SendBadRequest(w, httpx.MsgValidation, err.Error())
 		return
 	}
 	p := httpx.NewQueryParser(q)
@@ -129,7 +129,7 @@ func (h *Handler) listProfiles(w http.ResponseWriter, r *http.Request) {
 		f.VerificationStatus = &v
 	}
 	if errs := p.Errors(); len(errs) > 0 {
-		httpx.SendBadRequest(w, "validation error", errs...)
+		httpx.SendBadRequest(w, httpx.MsgValidation, errs...)
 		return
 	}
 
@@ -218,7 +218,7 @@ func (h *Handler) sendError(w http.ResponseWriter, err error) {
 func pathID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
-		httpx.SendError(w, http.StatusNotFound, httpx.ErrorResponse{ErrorCode: httpx.ErrNotFound, Message: "resource not found"})
+		httpx.SendError(w, http.StatusNotFound, httpx.ErrorResponse{ErrorCode: httpx.ErrNotFound, Message: "не найдено"})
 		return uuid.Nil, false
 	}
 	return id, true

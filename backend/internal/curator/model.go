@@ -11,16 +11,16 @@ import (
 )
 
 var (
-	ErrWorkspaceNotFound = errors.New("workspace not found")
-	ErrProfileNotFound   = errors.New("profile not found")
-	ErrInvalidStatus     = errors.New("unknown status")
-	ErrMentorLimit       = errors.New("mentor has no free slots")
-	ErrNoHelpRequest     = errors.New("user has no open help request")
-	ErrNotMentor         = errors.New("profile does not belong to a mentor")
-	ErrNotPending        = errors.New("verification is not pending")
-	ErrCommentRequired   = errors.New("comment is required")
-	ErrCommentTooLong    = errors.New("comment is too long")
-	ErrInvalidTarget     = errors.New("target must be student, mentor or both")
+	ErrWorkspaceNotFound = errors.New("пара не найдена")
+	ErrProfileNotFound   = errors.New("профиль не найден")
+	ErrInvalidStatus     = errors.New("неизвестный статус")
+	ErrMentorLimit       = errors.New("у наставника нет свободных мест")
+	ErrNoHelpRequest     = errors.New("у пользователя нет открытого запроса помощи")
+	ErrNotMentor         = errors.New("профиль не принадлежит наставнику")
+	ErrNotPending        = errors.New("профиль не ожидает проверки")
+	ErrCommentRequired   = errors.New("укажите комментарий")
+	ErrCommentTooLong    = errors.New("комментарий длиннее 1000 символов")
+	ErrInvalidTarget     = errors.New("получатель должен быть student, mentor или both")
 )
 
 const MaxCommentLen = 1000
