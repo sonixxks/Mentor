@@ -28,6 +28,7 @@ import (
 	"github.com/sonixxks/Mentor/backend/internal/transport/rest/middleware"
 	"github.com/sonixxks/Mentor/backend/internal/transport/rest/statusroutes"
 	"github.com/sonixxks/Mentor/backend/internal/user"
+	"github.com/sonixxks/Mentor/backend/internal/workspaces"
 )
 
 func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
@@ -133,6 +134,7 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 		catalog.NewHandler(catalogService, authMiddleware, lg),
 		curator.NewHandler(curatorService, authMiddleware, lg),
 		chat.NewHandler(chatService, authMiddleware, lg),
+		workspaces.NewHandler(workspaces.NewRepository(pool), authMiddleware, lg),
 	)
 
 	//router
