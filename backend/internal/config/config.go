@@ -15,6 +15,13 @@ type Config struct {
 	JWT              JWT
 	ConfirmationCode ConfirmationCode
 	RefreshTokens    RefreshTokens
+	Uploads          Uploads
+}
+
+// Uploads — загруженные файлы хранятся на диске и раздаются по /uploads/.
+type Uploads struct {
+	Dir     string `env:"UPLOADS_DIR" env-default:"./uploads"`
+	BaseURL string `env:"UPLOADS_BASE_URL" env-default:"http://127.0.0.1:8080/uploads"`
 }
 
 type RefreshTokens struct {

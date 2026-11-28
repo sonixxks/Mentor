@@ -19,8 +19,10 @@ import (
 	"github.com/sonixxks/Mentor/backend/internal/platform/mailer"
 	"github.com/sonixxks/Mentor/backend/internal/platform/memory"
 	"github.com/sonixxks/Mentor/backend/internal/platform/postgres"
+	"github.com/sonixxks/Mentor/backend/internal/platform/storage"
 	"github.com/sonixxks/Mentor/backend/internal/platform/validation"
 	"github.com/sonixxks/Mentor/backend/internal/profile"
+	"github.com/sonixxks/Mentor/backend/internal/profile/profilehttp"
 	"github.com/sonixxks/Mentor/backend/internal/requests"
 	"github.com/sonixxks/Mentor/backend/internal/transport/rest"
 	"github.com/sonixxks/Mentor/backend/internal/transport/rest/middleware"
@@ -86,6 +88,13 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 
 	devMailer := mailer.NewLogMailer(lg)
 
+	//uploads
+	files, err := storage.NewLocal(cfg.Uploads.Dir, cfg.Uploads.BaseURL)
+	if err != nil {
+		return fmt.Errorf("create uploads storage: %w", err)
+	}
+	profileService := profile.NewService(profileRepository, files)
+
 	//services
 
 	authService := auth.NewService(
@@ -117,6 +126,7 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 	serviceHandlers = append(serviceHandlers,
 		auth.NewHandler(validate, lg, authService),
 		account.NewHandler(userRepository, authMiddleware, lg),
+		profilehttp.NewHandler(profileService, authMiddleware, lg),
 	)
 	serviceHandlers = append(serviceHandlers,
 		requests.NewHandler(requestService, authMiddleware, lg),
@@ -131,6 +141,7 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 	//status routes
 	healthDB := statusroutes.DBHealthHandler{DBH: pool}
 	router.HandleFunc("GET /health", healthDB.Check)
+	router.Handle("GET /uploads/", files.Handler("/uploads/"))
 
 	//Server
 	srv := rest.BuildServer(cfg.App.Host, strconv.Itoa(cfg.App.Port), router)
