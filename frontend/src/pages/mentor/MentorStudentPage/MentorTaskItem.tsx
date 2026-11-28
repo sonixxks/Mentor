@@ -110,7 +110,11 @@ export function MentorTaskItem({ task, workspaceId, onEdit, onDelete }: MentorTa
             </p>
           ) : null}
 
-          <TaskComments taskId={task.id} workspaceId={workspaceId} />
+          <TaskComments
+            taskId={task.id}
+            workspaceId={workspaceId}
+            readOnly={task.status === 'completed'}
+          />
         </div>
       ) : null}
     </article>

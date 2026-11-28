@@ -165,7 +165,11 @@ export function TaskItem({ task, workspaceId }: TaskItemProps) {
             </a>
           ) : null}
 
-          <TaskComments taskId={task.id} workspaceId={workspaceId} />
+          <TaskComments
+            taskId={task.id}
+            workspaceId={workspaceId}
+            readOnly={task.status === 'completed'}
+          />
         </div>
       ) : null}
 
