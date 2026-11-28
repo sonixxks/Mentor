@@ -31,6 +31,11 @@ const (
 	ErrInternal            ErrCode = "INTERNAL_ERROR"
 )
 
+// MsgValidation — общий текст ошибки валидации; подробности по полям уходят в details.
+const MsgValidation = "проверьте правильность заполнения полей"
+
+const msgInternal = "внутренняя ошибка сервера, попробуйте позже"
+
 type ErrorResponse struct {
 	ErrorCode ErrCode  `json:"error_code"`
 	Message   string   `json:"message"`
@@ -42,16 +47,16 @@ func SendValidationErrors(w http.ResponseWriter, err error, statusCode int) {
 	if !errors.As(err, &validationErrs) {
 		slog.Error("Invalid request",
 			"error", err)
-		SendError(w, http.StatusInternalServerError, ErrorResponse{ErrorCode: ErrInternal, Message: "Internal server error"})
+		SendError(w, http.StatusInternalServerError, ErrorResponse{ErrorCode: ErrInternal, Message: msgInternal})
 		return
 	}
 
 	details := make([]string, 0, len(validationErrs))
 	for _, fe := range validationErrs {
-		details = append(details, fe.Field()+validation.ValidationMessage(fe))
+		details = append(details, fe.Field()+": "+validation.ValidationMessage(fe))
 	}
 
-	resp := ErrorResponse{ErrorCode: ErrValidation, Message: "Validation failed", Details: details}
+	resp := ErrorResponse{ErrorCode: ErrValidation, Message: MsgValidation, Details: details}
 
 	SendError(w, statusCode, resp)
 }
@@ -72,7 +77,7 @@ func SendJSON(w http.ResponseWriter, statusCode int, resp any) {
 }
 
 func SendInternalError(w http.ResponseWriter) {
-	SendError(w, http.StatusInternalServerError, ErrorResponse{ErrorCode: ErrInternal, Message: "internal server error"})
+	SendError(w, http.StatusInternalServerError, ErrorResponse{ErrorCode: ErrInternal, Message: msgInternal})
 }
 
 func SendBadRequest(w http.ResponseWriter, message string, details ...string) {

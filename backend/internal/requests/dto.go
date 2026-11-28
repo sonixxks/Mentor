@@ -54,6 +54,7 @@ type requestJSON struct {
 	CoverLetter         *string                  `json:"cover_letter,omitempty"`
 	RejectionReason     *string                  `json:"rejection_reason,omitempty"`
 	WorkspaceID         *uuid.UUID               `json:"workspace_id,omitempty"`
+	Match               *MatchInfo               `json:"match,omitempty"`
 	CreatedAt           time.Time                `json:"created_at"`
 	UpdatedAt           time.Time                `json:"updated_at"`
 }
@@ -92,6 +93,7 @@ func toRequestJSON(v View) requestJSON {
 		CoverLetter:         v.CoverLetter,
 		RejectionReason:     v.RejectionReason,
 		WorkspaceID:         v.WorkspaceID,
+		Match:               v.Match,
 		CreatedAt:           v.CreatedAt,
 		UpdatedAt:           v.UpdatedAt,
 	}

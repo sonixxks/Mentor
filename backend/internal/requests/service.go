@@ -2,6 +2,7 @@ package requests
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"unicode/utf8"
 
@@ -22,12 +23,40 @@ type Repository interface {
 	Accept(ctx context.Context, id uuid.UUID, notify []notifications.Notification) (Request, uuid.UUID, error)
 }
 
-type Service struct {
-	repo Repository
+// StudentMatcher — совместимость учеников с наставником (пакет matching).
+type StudentMatcher interface {
+	MatchStudents(ctx context.Context, mentorID uuid.UUID, studentIDs []uuid.UUID) (map[uuid.UUID]MatchInfo, error)
 }
 
-func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+type Service struct {
+	repo    Repository
+	matcher StudentMatcher
+}
+
+// NewService: matcher может быть nil — тогда заявки отдаются без match.
+func NewService(repo Repository, matcher StudentMatcher) *Service {
+	return &Service{repo: repo, matcher: matcher}
+}
+
+// attachMatch добавляет совместимость в заявки, которые видит наставник.
+func (s *Service) attachMatch(ctx context.Context, actor Actor, views []View) error {
+	if s.matcher == nil || actor.Role != user.Mentor || len(views) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, len(views))
+	for i, v := range views {
+		ids[i] = v.StudentID
+	}
+	matches, err := s.matcher.MatchStudents(ctx, actor.UserID, ids)
+	if err != nil {
+		return fmt.Errorf("match students: %w", err)
+	}
+	for i := range views {
+		if m, ok := matches[views[i].StudentID]; ok {
+			views[i].Match = &m
+		}
+	}
+	return nil
 }
 
 type CreateInput struct {
@@ -123,7 +152,14 @@ func (s *Service) ListMine(ctx context.Context, actor Actor, group Group, limit,
 		f.Statuses = ArchiveStatuses
 	}
 
-	return s.repo.List(ctx, f)
+	views, total, err := s.repo.List(ctx, f)
+	if err != nil {
+		return nil, 0, err
+	}
+	if err := s.attachMatch(ctx, actor, views); err != nil {
+		return nil, 0, err
+	}
+	return views, total, nil
 }
 
 // ListAll — очередь заявок куратора с необязательным фильтром по статусу.
@@ -194,7 +230,15 @@ func (s *Service) ChangeStatus(ctx context.Context, actor Actor, in ChangeStatus
 		}
 	}
 
-	return s.repo.GetView(ctx, req.ID)
+	view, err := s.repo.GetView(ctx, req.ID)
+	if err != nil {
+		return View{}, err
+	}
+	views := []View{view}
+	if err := s.attachMatch(ctx, actor, views); err != nil {
+		return View{}, err
+	}
+	return views[0], nil
 }
 
 // transitionNotices — кому сообщить о смене статуса: второй стороне,

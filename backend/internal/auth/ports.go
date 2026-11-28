@@ -19,7 +19,9 @@ type TokenIssuer interface {
 type UserRepository interface {
 	Create(ctx context.Context, userRecord user.UserRecord) (user.User, error)
 	FindByEmail(ctx context.Context, email string) (user.UserRecord, error)
+	FindByID(ctx context.Context, id uuid.UUID) (user.UserRecord, error)
 	ExistsByEmail(ctx context.Context, email string) (bool, error)
+	UpdatePassword(ctx context.Context, id uuid.UUID, hash string) error
 }
 
 type ProfileRepository interface {

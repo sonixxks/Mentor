@@ -10,22 +10,26 @@ import (
 
 	"net/http"
 
+	"github.com/sonixxks/Mentor/backend/internal/account"
 	"github.com/sonixxks/Mentor/backend/internal/auth"
 	"github.com/sonixxks/Mentor/backend/internal/catalog"
 	"github.com/sonixxks/Mentor/backend/internal/chat"
 	"github.com/sonixxks/Mentor/backend/internal/config"
 	"github.com/sonixxks/Mentor/backend/internal/curator"
-	"github.com/sonixxks/Mentor/backend/internal/faq"
+	"github.com/sonixxks/Mentor/backend/internal/matching"
 	"github.com/sonixxks/Mentor/backend/internal/platform/mailer"
 	"github.com/sonixxks/Mentor/backend/internal/platform/memory"
 	"github.com/sonixxks/Mentor/backend/internal/platform/postgres"
+	"github.com/sonixxks/Mentor/backend/internal/platform/storage"
 	"github.com/sonixxks/Mentor/backend/internal/platform/validation"
 	"github.com/sonixxks/Mentor/backend/internal/profile"
+	"github.com/sonixxks/Mentor/backend/internal/profile/profilehttp"
 	"github.com/sonixxks/Mentor/backend/internal/requests"
 	"github.com/sonixxks/Mentor/backend/internal/transport/rest"
 	"github.com/sonixxks/Mentor/backend/internal/transport/rest/middleware"
 	"github.com/sonixxks/Mentor/backend/internal/transport/rest/statusroutes"
 	"github.com/sonixxks/Mentor/backend/internal/user"
+	"github.com/sonixxks/Mentor/backend/internal/workspaces"
 )
 
 func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
@@ -84,6 +88,15 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 		return fmt.Errorf("create password hasher: %w", err)
 	}
 
+	devMailer := mailer.NewLogMailer(lg)
+
+	//uploads
+	files, err := storage.NewLocal(cfg.Uploads.Dir, cfg.Uploads.BaseURL)
+	if err != nil {
+		return fmt.Errorf("create uploads storage: %w", err)
+	}
+	profileService := profile.NewService(profileRepository, files)
+
 	//services
 
 	authService := auth.NewService(
@@ -96,30 +109,33 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 			Transactions:  transactionManager,
 			Registrations: memory.NewRegistrationStore(),
 			ResendLimiter: memory.NewResendLimiter(),
-			Mailer:        mailer.NewLogMailer(lg),
+			Mailer:        devMailer,
 			Codes:         auth.RandomCodeGenerator{},
+
+			PasswordResets: memory.NewPasswordResetStore(),
+			ResetMailer:    devMailer,
 		},
 		auth.Settings{CodeSettings: codeSettings, RefreshTokenSettings: refreshTokenSettings},
 	)
-	requestService := requests.NewService(requests.NewPostgresRepository(pool))
-	// Модуль подбора (процент совместимости) подключается вторым аргументом, пока nil.
-	catalogService := catalog.NewService(catalog.NewPostgresRepository(pool), nil)
+	matcher := matching.NewRepository(pool)
+	requestService := requests.NewService(requests.NewPostgresRepository(pool), matcher)
+	catalogService := catalog.NewService(catalog.NewPostgresRepository(pool), matcher)
 	curatorService := curator.NewService(curator.NewPostgresRepository(pool))
 	chatService := chat.NewService(chat.NewPostgresRepository(pool))
-	faqBot, err := faq.New()
-	if err != nil {
-		return fmt.Errorf("load faq: %w", err)
-	}
 
 	//handlers register
 	serviceHandlers := make([]rest.ServiceHandler, 0)
-	serviceHandlers = append(serviceHandlers, auth.NewHandler(validate, lg, authService))
+	serviceHandlers = append(serviceHandlers,
+		auth.NewHandler(validate, lg, authService),
+		account.NewHandler(userRepository, authMiddleware, lg),
+		profilehttp.NewHandler(profileService, authMiddleware, lg),
+	)
 	serviceHandlers = append(serviceHandlers,
 		requests.NewHandler(requestService, authMiddleware, lg),
 		catalog.NewHandler(catalogService, authMiddleware, lg),
 		curator.NewHandler(curatorService, authMiddleware, lg),
 		chat.NewHandler(chatService, authMiddleware, lg),
-		faq.NewHandler(faqBot),
+		workspaces.NewHandler(workspaces.NewRepository(pool), authMiddleware, lg),
 	)
 
 	//router
@@ -128,6 +144,7 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 	//status routes
 	healthDB := statusroutes.DBHealthHandler{DBH: pool}
 	router.HandleFunc("GET /health", healthDB.Check)
+	router.Handle("GET /uploads/", files.Handler("/uploads/"))
 
 	//Server
 	srv := rest.BuildServer(cfg.App.Host, strconv.Itoa(cfg.App.Port), router)

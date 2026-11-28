@@ -43,3 +43,18 @@ type ResendCodeRequest struct {
 type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token" validate:"required"`
 }
+
+type ForgotPasswordRequest struct {
+	Email string `json:"email" validate:"required,email,max=255"`
+}
+
+type VerifyResetCodeRequest struct {
+	Email string `json:"email" validate:"required,email,max=255"`
+	Code  string `json:"code" validate:"required,len=6,numeric"`
+}
+
+type ResetPasswordRequest struct {
+	Email       string `json:"email" validate:"required,email,max=255"`
+	Code        string `json:"code" validate:"required,len=6,numeric"`
+	NewPassword string `json:"new_password" validate:"required,min=8,max=72"`
+}

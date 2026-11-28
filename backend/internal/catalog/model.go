@@ -9,10 +9,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sonixxks/Mentor/backend/internal/matching"
 )
 
 var (
-	ErrMentorNotFound = errors.New("mentor not found")
+	ErrMentorNotFound = errors.New("наставник не найден")
 )
 
 type Sort string
@@ -47,18 +48,8 @@ type Skill struct {
 	Level int    `json:"level"`
 }
 
-// MatchInfo — процент совместимости с анкетой ученика (считает модуль подбора).
-type MatchInfo struct {
-	Percent   int            `json:"percent"`
-	Breakdown MatchBreakdown `json:"breakdown"`
-}
-
-type MatchBreakdown struct {
-	Skills int `json:"skills"`
-	Goals  int `json:"goals"`
-	Time   int `json:"time"`
-	Style  int `json:"style"`
-}
+// MatchInfo — процент совместимости с анкетой ученика (считает пакет matching).
+type MatchInfo = matching.Info
 
 // Matcher — расчёт совместимости ученика с наставниками (умный подбор).
 // Возвращает ok = false, если анкета ученика не заполнена.

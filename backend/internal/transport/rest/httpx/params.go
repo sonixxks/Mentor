@@ -27,7 +27,7 @@ func ParsePage(q url.Values, defaultLimit, maxLimit int) (Page, error) {
 	if raw := q.Get("page"); raw != "" {
 		n, err := strconv.Atoi(raw)
 		if err != nil || n < 1 {
-			return Page{}, fmt.Errorf("page must be a positive integer")
+			return Page{}, fmt.Errorf("page: должно быть положительным целым числом")
 		}
 		page.Number = n
 	}
@@ -35,7 +35,7 @@ func ParsePage(q url.Values, defaultLimit, maxLimit int) (Page, error) {
 	if raw := q.Get("limit"); raw != "" {
 		n, err := strconv.Atoi(raw)
 		if err != nil || n < 1 || n > maxLimit {
-			return Page{}, fmt.Errorf("limit must be between 1 and %d", maxLimit)
+			return Page{}, fmt.Errorf("limit: должно быть от 1 до %d", maxLimit)
 		}
 		page.Limit = n
 	}
@@ -47,7 +47,7 @@ func ParsePage(q url.Values, defaultLimit, maxLimit int) (Page, error) {
 func PathUUID(r *http.Request, name string) (uuid.UUID, error) {
 	id, err := uuid.Parse(r.PathValue(name))
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("%s must be a valid uuid", name)
+		return uuid.Nil, fmt.Errorf("%s: некорректный идентификатор", name)
 	}
 	return id, nil
 }
@@ -77,7 +77,7 @@ func (p *QueryParser) Bool(name string) *bool {
 	}
 	v, err := strconv.ParseBool(raw)
 	if err != nil {
-		p.errs = append(p.errs, name+": must be true or false")
+		p.errs = append(p.errs, name+": должно быть true или false")
 		return nil
 	}
 	return &v
@@ -90,7 +90,7 @@ func (p *QueryParser) Int(name string, minVal, maxVal int) *int {
 	}
 	v, err := strconv.Atoi(raw)
 	if err != nil || v < minVal || v > maxVal {
-		p.errs = append(p.errs, fmt.Sprintf("%s: must be an integer between %d and %d", name, minVal, maxVal))
+		p.errs = append(p.errs, fmt.Sprintf("%s: должно быть целым числом от %d до %d", name, minVal, maxVal))
 		return nil
 	}
 	return &v
@@ -103,7 +103,7 @@ func (p *QueryParser) Float(name string, minVal, maxVal float64) *float64 {
 	}
 	v, err := strconv.ParseFloat(raw, 64)
 	if err != nil || v < minVal || v > maxVal {
-		p.errs = append(p.errs, fmt.Sprintf("%s: must be a number between %g and %g", name, minVal, maxVal))
+		p.errs = append(p.errs, fmt.Sprintf("%s: должно быть числом от %g до %g", name, minVal, maxVal))
 		return nil
 	}
 	return &v
@@ -120,7 +120,7 @@ func (p *QueryParser) Enum(name, def string, allowed ...string) string {
 			return raw
 		}
 	}
-	p.errs = append(p.errs, name+": must be one of "+strings.Join(allowed, ", "))
+	p.errs = append(p.errs, name+": допустимые значения: "+strings.Join(allowed, ", "))
 	return def
 }
 

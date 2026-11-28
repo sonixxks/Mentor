@@ -40,13 +40,13 @@ func mapError(err error) (int, httpx.ErrorResponse) {
 	case errors.As(err, &rateLimited):
 		return http.StatusTooManyRequests, httpx.ErrorResponse{
 			ErrorCode: httpx.ErrTooManyRequests,
-			Message:   "Too many requests, try again later",
+			Message:   "слишком частые запросы, попробуйте позже",
 		}
 
 	case errors.Is(err, user.ErrEmailTaken):
 		return http.StatusConflict, httpx.ErrorResponse{
 			ErrorCode: httpx.ErrConflict,
-			Message:   "Email is already registered",
+			Message:   "пользователь с такой почтой уже зарегистрирован",
 		}
 
 	// Сюда попадает только то, что пропустил валидатор:
@@ -54,20 +54,20 @@ func mapError(err error) (int, httpx.ErrorResponse) {
 	case errors.Is(err, ErrPasswordTooLong):
 		return http.StatusBadRequest, httpx.ErrorResponse{
 			ErrorCode: httpx.ErrValidation,
-			Message:   "Validation failed",
-			Details:   []string{fmt.Sprintf("password: must be at most %d bytes long", BcryptLimit)},
+			Message:   httpx.MsgValidation,
+			Details:   []string{fmt.Sprintf("password: не длиннее %d байт", BcryptLimit)},
 		}
 	case errors.Is(err, ErrInvalidRole):
 		return http.StatusBadRequest, httpx.ErrorResponse{
 			ErrorCode: httpx.ErrValidation,
-			Message:   "Validation failed",
-			Details:   []string{"role: must be one of: student mentor"},
+			Message:   httpx.MsgValidation,
+			Details:   []string{"role: допустимые значения: student, mentor"},
 		}
 
 	case errors.Is(err, ErrInvalidCredentials):
 		return http.StatusUnauthorized, httpx.ErrorResponse{
 			ErrorCode: httpx.ErrUnauthorized,
-			Message:   "Invalid email or password",
+			Message:   "неверная почта или пароль",
 		}
 
 	// Невалидный или истёкший access-токен (JWT) — это 401 UNAUTHORIZED.
@@ -75,31 +75,31 @@ func mapError(err error) (int, httpx.ErrorResponse) {
 	case errors.Is(err, ErrInvalidToken), errors.Is(err, ErrTokenExpired):
 		return http.StatusUnauthorized, httpx.ErrorResponse{
 			ErrorCode: httpx.ErrUnauthorized,
-			Message:   "Invalid or expired token",
+			Message:   "недействительный или истёкший токен",
 		}
 
 	case errors.Is(err, ErrInvalidCode):
 		return http.StatusBadRequest, httpx.ErrorResponse{
 			ErrorCode: httpx.ErrInvalidCode,
-			Message:   "Invalid code",
+			Message:   "неверный или просроченный код",
 		}
 
 	case errors.Is(err, ErrTooManyAttempts):
 		return http.StatusTooManyRequests, httpx.ErrorResponse{
 			ErrorCode: httpx.ErrTooManyRequests,
-			Message:   "request a new code",
+			Message:   "попытки ввода кода исчерпаны, запросите новый код",
 		}
 
 	case errors.Is(err, ErrRefreshTokenNotFound):
 		return http.StatusUnauthorized, httpx.ErrorResponse{
 			ErrorCode: httpx.ErrUnauthorized,
-			Message:   "refresh token not found",
+			Message:   "сессия истекла, войдите заново",
 		}
 
 	default:
 		return http.StatusInternalServerError, httpx.ErrorResponse{
 			ErrorCode: httpx.ErrInternal,
-			Message:   "Internal server error",
+			Message:   "внутренняя ошибка сервера, попробуйте позже",
 		}
 	}
 }

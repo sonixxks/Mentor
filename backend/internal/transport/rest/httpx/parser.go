@@ -31,14 +31,14 @@ func readJSON(w http.ResponseWriter, r *http.Request, dst any, allowEmpty, inclu
 		var maxBytesErr *http.MaxBytesError
 
 		if errors.As(decodeErr, &maxBytesErr) {
-			SendError(w, http.StatusRequestEntityTooLarge, ErrorResponse{ErrorCode: ErrValidation, Message: "request body too large"})
+			SendError(w, http.StatusRequestEntityTooLarge, ErrorResponse{ErrorCode: ErrValidation, Message: "слишком большое тело запроса"})
 			return false
 		}
 
 		if includeDetails {
-			SendBadRequest(w, "invalid JSON body", decodeErr.Error())
+			SendBadRequest(w, "некорректный JSON в теле запроса", decodeErr.Error())
 		} else {
-			SendBadRequest(w, "parsing request body failed")
+			SendBadRequest(w, "некорректный JSON в теле запроса")
 		}
 		return false
 	}

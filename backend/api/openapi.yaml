@@ -53,7 +53,6 @@ tags:
 - name: Notifications
 - name: Curator
 - name: Admin
-- name: FAQ
 paths:
   /auth/register:
     post:
@@ -2386,54 +2385,6 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
-  /faq:
-    get:
-      tags:
-      - FAQ
-      summary: Вопросы и ответы
-      operationId: getFaq
-      description: База FAQ-бота (тот же текст, что использует `POST /faq/ask`).
-      security: *id001
-      responses:
-        '200':
-          description: Все вопросы с ответами
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/FaqEntry'
-  /faq/ask:
-    post:
-      tags:
-      - FAQ
-      summary: Спросить FAQ-бота
-      operationId: askFaq
-      description: 'Простой бот по ключевым словам: ищет вопрос из базы с наибольшим совпадением. Если ничего не найдено, `matched = false`,
-        в `answer` подсказка обратиться к куратору, в `suggestions` популярные вопросы.'
-      security: *id001
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - question
-              properties:
-                question:
-                  type: string
-                  minLength: 1
-                  maxLength: 500
-      responses:
-        '200':
-          description: Ответ бота
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FaqAnswer'
-        '400':
-          $ref: '#/components/responses/BadRequest'
 components:
   securitySchemes:
     BearerAuth:
@@ -2483,48 +2434,6 @@ components:
           schema:
             type: integer
   schemas:
-    FaqEntry:
-      type: object
-      required:
-      - id
-      - question
-      - answer
-      properties:
-        id:
-          type: string
-          example: cancel_request
-        question:
-          type: string
-        answer:
-          type: string
-    FaqAnswer:
-      type: object
-      required:
-      - matched
-      - answer
-      - suggestions
-      properties:
-        matched:
-          type: boolean
-        question_id:
-          type: string
-          nullable: true
-          description: id найденного вопроса (null, если ничего не найдено)
-        answer:
-          type: string
-        suggestions:
-          type: array
-          maxItems: 3
-          items:
-            type: object
-            required:
-            - id
-            - question
-            properties:
-              id:
-                type: string
-              question:
-                type: string
     ErrorResponse:
       type: object
       required:

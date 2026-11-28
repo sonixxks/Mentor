@@ -31,6 +31,10 @@ type ServiceDeps struct {
 	ResendLimiter ResendLimiter
 	Mailer        Mailer
 	Codes         CodeGenerator
+
+	// Восстановление пароля.
+	PasswordResets PasswordResetStore
+	ResetMailer    PasswordResetMailer
 }
 
 type Service struct {
@@ -44,6 +48,9 @@ type Service struct {
 	resendLimiter ResendLimiter
 	mailer        Mailer
 	codes         CodeGenerator
+
+	passwordResets PasswordResetStore
+	resetMailer    PasswordResetMailer
 
 	settings Settings
 	now      func() time.Time // подменяется в тестах
@@ -61,8 +68,12 @@ func NewService(deps ServiceDeps, settings Settings) *Service {
 		resendLimiter: deps.ResendLimiter,
 		mailer:        deps.Mailer,
 		codes:         deps.Codes,
-		settings:      settings,
-		now:           time.Now,
+
+		passwordResets: deps.PasswordResets,
+		resetMailer:    deps.ResetMailer,
+
+		settings: settings,
+		now:      time.Now,
 	}
 }
 
