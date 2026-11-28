@@ -5,7 +5,9 @@ import type {
   WorkspaceFile,
   WorkspaceStatus,
 } from '../../api/workspaces'
+import { formatMeetingTime } from '../../lib/dates'
 import { MENTORS } from './mentors'
+import { MENTOR_ID_BY_USER } from './requests'
 import type { MockRequest } from './requests'
 
 export type MockWorkspace = {
@@ -25,23 +27,43 @@ export type MockMeeting = Omit<Meeting, 'jitsi_link' | 'my_review_rating'> & {
 
 export type MockFile = WorkspaceFile & { workspace_id: string }
 
+export type MockMessage = {
+  id: string
+  workspace_id: string
+  type: 'text' | 'system'
+  sender_id: string | null
+  text: string | null
+  file_id: string | null
+  read: boolean
+  created_at: string
+}
+
 type Store = {
   workspaces: MockWorkspace[]
   tasks: MockTask[]
   comments: TaskComment[]
   meetings: MockMeeting[]
   files: MockFile[]
+  messages: MockMessage[]
 }
 
 const KEY = 'mock-workspaces'
 const DAY = 24 * 60 * 60 * 1000
+const HOUR = 60 * 60 * 1000
 
-const empty = (): Store => ({ workspaces: [], tasks: [], comments: [], meetings: [], files: [] })
+const empty = (): Store => ({
+  workspaces: [],
+  tasks: [],
+  comments: [],
+  meetings: [],
+  files: [],
+  messages: [],
+})
 
 function load(): Store {
   try {
     const saved = localStorage.getItem(KEY)
-    return saved ? JSON.parse(saved) : empty()
+    return saved ? { ...empty(), ...JSON.parse(saved) } : empty()
   } catch {
     return empty()
   }
@@ -53,15 +75,34 @@ export function saveStore() {
   localStorage.setItem(KEY, JSON.stringify(store))
 }
 
-function daysFromNow(days: number, hourInEkb = 12) {
+export function userIdOfMentor(mentorId: string) {
+  const userId = Object.keys(MENTOR_ID_BY_USER).find((key) => MENTOR_ID_BY_USER[key] === mentorId)
+  return userId ?? mentorId
+}
+
+export function addSystemMessage(workspaceId: string, text: string) {
+  store.messages.push({
+    id: `msg-${Date.now()}-${store.messages.length}`,
+    workspace_id: workspaceId,
+    type: 'system',
+    sender_id: null,
+    text,
+    file_id: null,
+    read: true,
+    created_at: new Date().toISOString(),
+  })
+}
+
+function daysFromNow(days: number, hourInEkb = 12, minute = 0) {
   const date = new Date(Date.now() + days * DAY)
-  date.setUTCHours(hourInEkb - 5, 0, 0, 0)
+  date.setUTCHours(hourInEkb - 5, minute, 0, 0)
   return date.toISOString()
 }
 
 export function createWorkspace(request: MockRequest) {
   const id = `ws-${request.id}`
   const mentor = MENTORS.find((m) => m.id === request.mentor_id)
+  const mentorUserId = userIdOfMentor(request.mentor_id)
 
   store.workspaces.push({
     id,
@@ -123,6 +164,8 @@ export function createWorkspace(request: MockRequest) {
     })
   }
 
+  const nextMeeting = daysFromNow(2, 18)
+
   store.meetings.push(
     {
       id: `${id}-m1`,
@@ -136,7 +179,7 @@ export function createWorkspace(request: MockRequest) {
       id: `${id}-m2`,
       workspace_id: id,
       title: 'Разбор тест-кейсов',
-      start_time: daysFromNow(2, 18),
+      start_time: nextMeeting,
       end_time: daysFromNow(2, 19),
       reviews: {},
     },
@@ -147,11 +190,11 @@ export function createWorkspace(request: MockRequest) {
       id: `${id}-f1`,
       workspace_id: id,
       type: 'file',
-      file_name: 'План работы.docx',
-      file_url: 'https://example.com/plan.docx',
-      file_size_kb: 248,
+      file_name: 'Замечания по датасету.pdf',
+      file_url: 'https://example.com/notes.pdf',
+      file_size_kb: 412,
       uploaded_by: request.mentor_id,
-      created_at: daysFromNow(-20),
+      created_at: daysFromNow(-1, 22),
     },
     {
       id: `${id}-f2`,
@@ -162,6 +205,49 @@ export function createWorkspace(request: MockRequest) {
       file_size_kb: null,
       uploaded_by: request.mentor_id,
       created_at: daysFromNow(-5),
+    },
+  )
+
+  store.messages.push(
+    {
+      id: `${id}-msg1`,
+      workspace_id: id,
+      type: 'text',
+      sender_id: request.student_id,
+      text: 'Отправила описание датасета на проверку, посмотри, когда будет время',
+      file_id: null,
+      read: true,
+      created_at: daysFromNow(-1, 21, 14),
+    },
+    {
+      id: `${id}-msg2`,
+      workspace_id: id,
+      type: 'text',
+      sender_id: mentorUserId,
+      text: null,
+      file_id: `${id}-f1`,
+      read: true,
+      created_at: daysFromNow(-1, 22),
+    },
+    {
+      id: `${id}-msg3`,
+      workspace_id: id,
+      type: 'text',
+      sender_id: mentorUserId,
+      text: 'Посмотрел. В целом отлично, пара замечаний в файле выше. Давай созвонимся послезавтра?',
+      file_id: null,
+      read: false,
+      created_at: new Date(Date.now() - 3 * HOUR).toISOString(),
+    },
+    {
+      id: `${id}-msg4`,
+      workspace_id: id,
+      type: 'system',
+      sender_id: null,
+      text: `Встреча назначена: ${formatMeetingTime(nextMeeting)}`,
+      file_id: null,
+      read: true,
+      created_at: new Date(Date.now() - 2 * HOUR).toISOString(),
     },
   )
 

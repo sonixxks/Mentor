@@ -2,8 +2,9 @@ import { http, HttpResponse } from 'msw'
 import type { TaskStatus, TaskStatusUpdate } from '../../api/workspaces'
 import { MENTORS, REVIEWS } from '../data/mentors'
 import { MENTOR_ID_BY_USER } from '../data/requests'
-import { saveStore, store } from '../data/workspaces'
-import type { MockMeeting, MockTask, MockWorkspace } from '../data/workspaces'
+import { addSystemMessage, saveStore, store } from '../data/workspaces'
+import type { MockMeeting, MockMessage, MockTask, MockWorkspace } from '../data/workspaces'
+import { formatMeetingTime } from '../../lib/dates'
 import { API, currentUser, error, unauthorized, users } from '../db'
 import type { MockUser } from '../db'
 
@@ -44,7 +45,7 @@ function personOf(user: MockUser) {
   return user.role === 'mentor' ? mentorRef(MENTOR_ID_BY_USER[user.id]) : studentRef(user.id)
 }
 
-const jitsiLink = (ws: MockWorkspace) => `https://meet.jit.si/cosmomentor-${ws.id}`
+const jitsiLink = (ws: MockWorkspace) => `https://meet.jit.si/kurator-${ws.id}`
 
 function meetingResponse(meeting: MockMeeting, ws: MockWorkspace, user: MockUser) {
   const { reviews, ...rest } = meeting
@@ -59,6 +60,16 @@ function taskResponse(task: MockTask) {
   }
 }
 
+function messageResponse(message: MockMessage) {
+  const { workspace_id, file_id, read, ...rest } = message
+  const found = file_id ? store.files.find((f) => f.id === file_id) : undefined
+  return {
+    ...rest,
+    file: found ? { ...found, workspace_id: undefined } : null,
+    is_read: read,
+  }
+}
+
 function summary(ws: MockWorkspace, user: MockUser) {
   const tasks = store.tasks.filter((t) => t.workspace_id === ws.id)
   const done = tasks.filter((t) => t.status === 'completed').length
@@ -68,7 +79,9 @@ function summary(ws: MockWorkspace, user: MockUser) {
     partner: user.role === 'student' ? mentorRef(ws.mentor_id) : studentRef(ws.student_id),
     progress_percent: tasks.length ? Math.round((done / tasks.length) * 100) : 0,
     started_at: ws.started_at,
-    unread_messages: 0,
+    unread_messages: store.messages.filter(
+      (m) => m.workspace_id === ws.id && m.type === 'text' && m.sender_id !== user.id && !m.read,
+    ).length,
     tasks_on_review: tasks.filter((t) => t.status === 'on_review').length,
     inactive_days: null,
   }
@@ -385,6 +398,7 @@ export const workspaceHandlers = [
       reviews: {},
     }
     store.meetings.push(meeting)
+    addSystemMessage(a.ws.id, `Встреча назначена: ${formatMeetingTime(meeting.start_time)}`)
     saveStore()
     return HttpResponse.json(meetingResponse(meeting, a.ws, a.user), { status: 201 })
   }),
@@ -407,6 +421,9 @@ export const workspaceHandlers = [
     if (body.title !== undefined) meeting.title = body.title.trim() || 'Встреча'
     if (body.start_time !== undefined) meeting.start_time = body.start_time
     if (body.end_time !== undefined) meeting.end_time = body.end_time
+    if (body.start_time !== undefined) {
+      addSystemMessage(a.ws.id, `Встреча перенесена: ${formatMeetingTime(meeting.start_time)}`)
+    }
     saveStore()
     return HttpResponse.json(meetingResponse(meeting, a.ws, a.user))
   }),
@@ -441,6 +458,56 @@ export const workspaceHandlers = [
       },
       { status: 201 },
     )
+  }),
+
+  http.get(`${API}/workspaces/:id/messages`, ({ params, request }) => {
+    const a = access(request, String(params.id))
+    if ('fail' in a) return a.fail
+
+    const search = new URL(request.url).searchParams
+    const before = search.get('before')
+    const limit = Math.min(Number(search.get('limit') ?? 50), 100)
+
+    const messages = store.messages
+      .filter((m) => m.workspace_id === a.ws.id && (!before || m.created_at < before))
+      .sort((x, y) => x.created_at.localeCompare(y.created_at))
+      .slice(-limit)
+      .map(messageResponse)
+    return HttpResponse.json(messages)
+  }),
+
+  http.post(`${API}/workspaces/:id/messages`, async ({ params, request }) => {
+    const a = access(request, String(params.id))
+    if ('fail' in a) return a.fail
+
+    const body = (await request.json()) as { text?: string; file_id?: string }
+    const text = body.text?.trim() ?? ''
+    if (!text && !body.file_id) return error(400, 'VALIDATION_ERROR', 'text or file_id is required')
+    if (text.length > 4000) return error(400, 'VALIDATION_ERROR', 'text is too long')
+
+    const message: MockMessage = {
+      id: `msg-${Date.now()}`,
+      workspace_id: a.ws.id,
+      type: 'text',
+      sender_id: a.user.id,
+      text: text || null,
+      file_id: body.file_id ?? null,
+      read: false,
+      created_at: new Date().toISOString(),
+    }
+    store.messages.push(message)
+    saveStore()
+    return HttpResponse.json(messageResponse(message), { status: 201 })
+  }),
+
+  http.post(`${API}/workspaces/:id/messages/read`, ({ params, request }) => {
+    const a = access(request, String(params.id))
+    if ('fail' in a) return a.fail
+    store.messages.forEach((m) => {
+      if (m.workspace_id === a.ws.id && m.sender_id !== a.user.id) m.read = true
+    })
+    saveStore()
+    return new HttpResponse(null, { status: 204 })
   }),
 
   http.get(`${API}/workspaces/:id/files`, ({ params, request }) => {
