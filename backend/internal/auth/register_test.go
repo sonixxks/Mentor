@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/sonixxks/Mentor/backend/internal/profile"
 	"github.com/sonixxks/Mentor/backend/internal/user"
 )
@@ -23,6 +24,10 @@ func (f *fakeUsers) FindByEmail(context.Context, string) (user.UserRecord, error
 	return user.UserRecord{}, user.ErrUserNotFound
 }
 func (f *fakeUsers) ExistsByEmail(context.Context, string) (bool, error) { return f.exists, nil }
+func (f *fakeUsers) FindByID(context.Context, uuid.UUID) (user.UserRecord, error) {
+	return user.UserRecord{}, user.ErrUserNotFound
+}
+func (f *fakeUsers) UpdatePassword(context.Context, uuid.UUID, string) error { return nil }
 
 type fakeProfiles struct{}
 

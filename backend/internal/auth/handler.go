@@ -28,6 +28,8 @@ type AuthService interface {
 	VerifyEmail(context.Context, VerifyEmailRequest) (TokenPair, error)
 	Register(ctx context.Context, req RegRequest) (RegisterResult, error)
 	Login(ctx context.Context, req LoginRequest) (TokenPair, error)
+	ResendCode(ctx context.Context, req ResendCodeRequest) (RegisterResult, error)
+	Refresh(ctx context.Context, req RefreshRequest) (TokenPair, error)
 }
 
 func (h *AuthHandler) handleRegister(w http.ResponseWriter, r *http.Request) {
@@ -95,8 +97,50 @@ func (h *AuthHandler) Register(mux *http.ServeMux) {
 	//Registration
 	mux.HandleFunc("POST /auth/register", h.handleRegister)
 
+	mux.HandleFunc("POST /auth/resend-code", h.handleResendCode)
+
 	//Login
 	mux.HandleFunc("POST /auth/login", h.handleLogin)
+	mux.HandleFunc("POST /auth/refresh", h.handleRefresh)
+}
+
+func (h *AuthHandler) handleResendCode(w http.ResponseWriter, r *http.Request) {
+	var req ResendCodeRequest
+	if !httpx.ReadBodyWithLimit(w, r, &req) {
+		return
+	}
+	req.Email = normalizeEmail(req.Email)
+	if err := h.validate.Struct(req); err != nil {
+		httpx.SendValidationErrors(w, err, http.StatusBadRequest)
+		return
+	}
+	res, err := h.authService.ResendCode(r.Context(), req)
+	if err != nil {
+		h.writeError(w, r, "resend-code", err)
+		return
+	}
+	httpx.SendJSON(w, http.StatusOK, CodeSentResponse{
+		ExpiresInSeconds:   int(res.CodeExpiresIn.Seconds()),
+		ResendAfterSeconds: int(res.ResendAfter.Seconds()),
+	})
+}
+
+func (h *AuthHandler) handleRefresh(w http.ResponseWriter, r *http.Request) {
+	var req RefreshRequest
+	if !httpx.ReadBodyWithLimit(w, r, &req) {
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
+		// Пустой токен — та же ситуация, что и отозванный: нужно войти заново.
+		h.writeError(w, r, "refresh", ErrRefreshTokenNotFound)
+		return
+	}
+	pair, err := h.authService.Refresh(r.Context(), req)
+	if err != nil {
+		h.writeError(w, r, "refresh", err)
+		return
+	}
+	httpx.SendJSON(w, http.StatusOK, TokenResponse{AccessToken: pair.AccessToken, RefreshToken: pair.RefreshToken})
 }
 
 func (h *AuthHandler) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {

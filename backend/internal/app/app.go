@@ -10,6 +10,7 @@ import (
 
 	"net/http"
 
+	"github.com/sonixxks/Mentor/backend/internal/account"
 	"github.com/sonixxks/Mentor/backend/internal/auth"
 	"github.com/sonixxks/Mentor/backend/internal/catalog"
 	"github.com/sonixxks/Mentor/backend/internal/chat"
@@ -108,7 +109,10 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 
 	//handlers register
 	serviceHandlers := make([]rest.ServiceHandler, 0)
-	serviceHandlers = append(serviceHandlers, auth.NewHandler(validate, lg, authService))
+	serviceHandlers = append(serviceHandlers,
+		auth.NewHandler(validate, lg, authService),
+		account.NewHandler(userRepository, authMiddleware, lg),
+	)
 	serviceHandlers = append(serviceHandlers,
 		requests.NewHandler(requestService, authMiddleware, lg),
 		catalog.NewHandler(catalogService, authMiddleware, lg),
