@@ -61,7 +61,11 @@ function PartnerCard({ workspace }: { workspace: WorkspaceDetail }) {
           </Link>
           <span className={styles.muted}>наставник</span>
         </div>
-        <Link to="/student/chat" className={styles.chatButton} aria-label="Написать наставнику">
+        <Link
+          to={`/student/chat/${workspace.id}`}
+          className={styles.chatButton}
+          aria-label="Написать наставнику"
+        >
           <MessageCircle size={20} />
         </Link>
       </div>

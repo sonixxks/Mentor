@@ -7,7 +7,7 @@ import { workspaceHandlers } from './workspaces'
 export const handlers = [
   ...authHandlers,
   ...profileHandlers,
+  ...workspaceHandlers,
   ...mentorHandlers,
   ...requestHandlers,
-  ...workspaceHandlers,
 ]

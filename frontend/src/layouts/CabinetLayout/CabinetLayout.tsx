@@ -2,6 +2,7 @@ import { Outlet, useLocation, useMatches, useNavigate } from 'react-router-dom'
 import { useMyProfile } from '../../hooks/useMyProfile'
 import { useSession } from '../../hooks/useSession'
 import { homeByRole } from '../../lib/auth'
+import { greeting } from '../../lib/dates'
 import { CuratorHelpCard } from '../../widgets/CuratorHelpCard'
 import { NAV, findActive } from '../../widgets/nav'
 import { Sidebar } from '../../widgets/Sidebar'
@@ -9,8 +10,7 @@ import { TabBar } from '../../widgets/TabBar'
 import { TopBar } from '../../widgets/TopBar'
 import styles from './CabinetLayout.module.css'
 
-/** Что страница может сообщить каркасу через handle в роутере */
-type RouteHandle = { title?: string; back?: boolean }
+type RouteHandle = { title?: string; back?: boolean; greeting?: boolean }
 
 export function CabinetLayout() {
   const { role, logout } = useSession()
@@ -24,12 +24,15 @@ export function CabinetLayout() {
   const items = NAV[role]
   const active = findActive(items, location.pathname)
   const handle = matches[matches.length - 1]?.handle as RouteHandle | undefined
+  const firstName = profile.data?.first_name
 
-  const title = handle?.title ?? active?.title ?? active?.label ?? ''
+  const title =
+    handle?.greeting && firstName
+      ? `${greeting()}, ${firstName}`
+      : (handle?.title ?? active?.title ?? active?.label ?? '')
   const fullName = [profile.data?.first_name, profile.data?.last_name].filter(Boolean).join(' ')
 
   function goBack() {
-    // Если страницу открыли по прямой ссылке, назад в истории идти некуда
     if (location.key === 'default') navigate(homeByRole[role!])
     else navigate(-1)
   }

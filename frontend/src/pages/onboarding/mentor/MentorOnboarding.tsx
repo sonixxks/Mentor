@@ -18,7 +18,6 @@ import { useSession } from '../../../hooks/useSession'
 
 function validate(step: number, a: MentorAnswers, documents: File[]) {
   if (step === 1) {
-    if (!a.lastName.trim() || !a.firstName.trim()) return 'Укажите фамилию и имя'
     if (!a.position.trim()) return 'Укажите должность'
     if (!a.experience) return 'Выберите опыт работы'
     if (!a.about.trim()) return 'Расскажите коротко о себе'
@@ -92,9 +91,6 @@ export function MentorOnboarding({ step }: { step: number }) {
       const links = a.links.map((link) => link.trim()).filter(Boolean)
 
       await updateMyProfile({
-        first_name: a.firstName.trim(),
-        last_name: a.lastName.trim(),
-        middle_name: a.middleName.trim() || undefined,
         job_title: a.position.trim(),
         company: a.selfEmployed ? null : a.company.trim() || null,
         experience: a.experience,

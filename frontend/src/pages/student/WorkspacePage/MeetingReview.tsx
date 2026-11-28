@@ -11,7 +11,19 @@ import styles from './WorkspacePage.module.css'
 
 const STARS = [1, 2, 3, 4, 5]
 
-export function MeetingReview({ workspaceId }: { workspaceId: string }) {
+type MeetingReviewProps = {
+  workspaceId: string
+  ask?: (date: string) => string
+  hint?: string
+  doneText?: string
+}
+
+export function MeetingReview({
+  workspaceId,
+  ask = (date) => `Как прошла встреча ${date}?`,
+  hint = 'Оценка с твоим именем и датой встречи появится в отзывах наставника.',
+  doneText = 'Она появится в отзывах наставника.',
+}: MeetingReviewProps) {
   const queryClient = useQueryClient()
   const [rating, setRating] = useState(0)
   const [hover, setHover] = useState(0)
@@ -33,7 +45,7 @@ export function MeetingReview({ workspaceId }: { workspaceId: string }) {
     return (
       <section className={clsx(styles.card, styles.reviewCard)}>
         <h3 className={styles.cardTitle}>Спасибо за оценку!</h3>
-        <p className={styles.secondary}>Она появится в отзывах наставника.</p>
+        <p className={styles.secondary}>{doneText}</p>
       </section>
     )
   }
@@ -48,7 +60,7 @@ export function MeetingReview({ workspaceId }: { workspaceId: string }) {
 
   return (
     <section className={clsx(styles.card, styles.reviewCard)}>
-      <h3 className={styles.cardTitle}>Как прошла встреча {formatDate(target.start_time)}?</h3>
+      <h3 className={styles.cardTitle}>{ask(formatDate(target.start_time))}</h3>
 
       <div
         className={styles.stars}
@@ -91,9 +103,7 @@ export function MeetingReview({ workspaceId }: { workspaceId: string }) {
         </>
       ) : null}
 
-      <p className={styles.hint}>
-        Оценка с твоим именем и датой встречи появится в отзывах наставника.
-      </p>
+      <p className={styles.hint}>{hint}</p>
 
       {send.isError ? (
         <p className={styles.error} role="alert">

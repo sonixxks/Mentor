@@ -43,7 +43,7 @@ export const REQUEST_STATUS: Record<RequestStatus, { label: string; variant: Bad
 }
 
 export const TASK_STATUS: Record<TaskStatus, { label: string; variant: BadgeTone }> = {
-  todo: { label: 'Не начата', variant: 'neutral' },
+  todo: { label: 'Запланировано', variant: 'neutral' },
   in_progress: { label: 'В работе', variant: 'neutral' },
   on_review: { label: 'На проверке', variant: 'review' },
   needs_revision: { label: 'На доработке', variant: 'pending' },

@@ -12,9 +12,10 @@ import styles from './WorkspacePage.module.css'
 type TaskCommentsProps = {
   taskId: string
   workspaceId: string
+  readOnly?: boolean
 }
 
-export function TaskComments({ taskId, workspaceId }: TaskCommentsProps) {
+export function TaskComments({ taskId, workspaceId, readOnly = false }: TaskCommentsProps) {
   const queryClient = useQueryClient()
   const [text, setText] = useState('')
 
@@ -37,6 +38,8 @@ export function TaskComments({ taskId, workspaceId }: TaskCommentsProps) {
     if (text.trim()) send.mutate()
   }
 
+  if (readOnly && comments.data?.length === 0) return null
+
   return (
     <div className={styles.comments}>
       {comments.isPending ? <p className={styles.muted}>Загружаем комментарии…</p> : null}
@@ -56,23 +59,25 @@ export function TaskComments({ taskId, workspaceId }: TaskCommentsProps) {
         )
       })}
 
-      <form className={styles.commentForm} onSubmit={handleSubmit}>
-        <Input
-          placeholder="Комментарий к задаче"
-          aria-label="Комментарий к задаче"
-          maxLength={2000}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-        />
-        <button
-          type="submit"
-          className={styles.sendButton}
-          disabled={!text.trim() || send.isPending}
-          aria-label="Отправить комментарий"
-        >
-          <Send size={18} />
-        </button>
-      </form>
+      {readOnly ? null : (
+        <form className={styles.commentForm} onSubmit={handleSubmit}>
+          <Input
+            placeholder="Комментарий к задаче"
+            aria-label="Комментарий к задаче"
+            maxLength={2000}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+          <button
+            type="submit"
+            className={styles.sendButton}
+            disabled={!text.trim() || send.isPending}
+            aria-label="Отправить комментарий"
+          >
+            <Send size={18} />
+          </button>
+        </form>
+      )}
 
       {send.isError ? (
         <p className={styles.error} role="alert">

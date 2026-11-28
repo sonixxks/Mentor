@@ -127,7 +127,8 @@ export function TaskItem({ task, workspaceId }: TaskItemProps) {
 
           {task.mentor_comment ? (
             <p className={styles.mentorComment}>
-              <b>Комментарий наставника:</b> {task.mentor_comment}
+              <b>{task.status === 'needs_revision' ? 'Что доработать:' : 'Отзыв наставника:'}</b>{' '}
+              {task.mentor_comment}
             </p>
           ) : null}
 
@@ -164,7 +165,11 @@ export function TaskItem({ task, workspaceId }: TaskItemProps) {
             </a>
           ) : null}
 
-          <TaskComments taskId={task.id} workspaceId={workspaceId} />
+          <TaskComments
+            taskId={task.id}
+            workspaceId={workspaceId}
+            readOnly={task.status === 'completed'}
+          />
         </div>
       ) : null}
 

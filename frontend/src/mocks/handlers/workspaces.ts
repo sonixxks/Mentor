@@ -1,11 +1,14 @@
 import { http, HttpResponse } from 'msw'
 import type { TaskStatus, TaskStatusUpdate } from '../../api/workspaces'
-import { MENTORS } from '../data/mentors'
+import { MENTORS, REVIEWS } from '../data/mentors'
 import { MENTOR_ID_BY_USER } from '../data/requests'
-import { saveStore, store } from '../data/workspaces'
-import type { MockMeeting, MockWorkspace } from '../data/workspaces'
+import { addSystemMessage, saveStore, store } from '../data/workspaces'
+import type { MockMeeting, MockMessage, MockTask, MockWorkspace } from '../data/workspaces'
+import { formatMeetingTime } from '../../lib/dates'
 import { API, currentUser, error, unauthorized, users } from '../db'
 import type { MockUser } from '../db'
+
+const DAY = 24 * 60 * 60 * 1000
 
 const NEXT_TASK: Record<string, Partial<Record<TaskStatus, TaskStatus[]>>> = {
   student: { todo: ['in_progress'], in_progress: ['on_review'], needs_revision: ['on_review'] },
@@ -49,6 +52,24 @@ function meetingResponse(meeting: MockMeeting, ws: MockWorkspace, user: MockUser
   return { ...rest, jitsi_link: jitsiLink(ws), my_review_rating: reviews[user.id] ?? null }
 }
 
+function taskResponse(task: MockTask) {
+  const { workspace_id, ...rest } = task
+  return {
+    ...rest,
+    comments_count: store.comments.filter((c) => c.task_id === task.id).length,
+  }
+}
+
+function messageResponse(message: MockMessage) {
+  const { workspace_id, file_id, read, ...rest } = message
+  const found = file_id ? store.files.find((f) => f.id === file_id) : undefined
+  return {
+    ...rest,
+    file: found ? { ...found, workspace_id: undefined } : null,
+    is_read: read,
+  }
+}
+
 function summary(ws: MockWorkspace, user: MockUser) {
   const tasks = store.tasks.filter((t) => t.workspace_id === ws.id)
   const done = tasks.filter((t) => t.status === 'completed').length
@@ -58,7 +79,9 @@ function summary(ws: MockWorkspace, user: MockUser) {
     partner: user.role === 'student' ? mentorRef(ws.mentor_id) : studentRef(ws.student_id),
     progress_percent: tasks.length ? Math.round((done / tasks.length) * 100) : 0,
     started_at: ws.started_at,
-    unread_messages: 0,
+    unread_messages: store.messages.filter(
+      (m) => m.workspace_id === ws.id && m.type === 'text' && m.sender_id !== user.id && !m.read,
+    ).length,
     tasks_on_review: tasks.filter((t) => t.status === 'on_review').length,
     inactive_days: null,
   }
@@ -94,7 +117,8 @@ function access(request: Request, workspaceId: string) {
   if (!user) return { fail: unauthorized() }
   const ws = store.workspaces.find((w) => w.id === workspaceId)
   if (!ws) return { fail: error(404, 'NOT_FOUND', 'Workspace not found') }
-  if (!isMember(user, ws)) return { fail: error(403, 'FORBIDDEN', 'Not a member of this workspace') }
+  if (!isMember(user, ws))
+    return { fail: error(403, 'FORBIDDEN', 'Not a member of this workspace') }
   return { user, ws }
 }
 
@@ -107,7 +131,86 @@ function isUrl(value: string) {
   }
 }
 
+const isDate = (value?: string) => Boolean(value) && !Number.isNaN(Date.parse(value as string))
+
 export const workspaceHandlers = [
+  http.get(`${API}/mentors/me/stats`, ({ request }) => {
+    const user = currentUser(request)
+    if (!user) return unauthorized()
+    if (user.role !== 'mentor') return error(403, 'FORBIDDEN', 'Mentors only')
+
+    const mentorId = MENTOR_ID_BY_USER[user.id]
+    const mentor = MENTORS.find((m) => m.id === mentorId)
+    const mine = store.workspaces.filter((ws) => ws.mentor_id === mentorId)
+    const active = mine.filter((ws) => ws.status !== 'completed').length
+    const max = mentor?.max_students ?? 0
+    const monthAgo = Date.now() - 30 * DAY
+    const meetings = store.meetings.filter((m) => {
+      const start = Date.parse(m.start_time)
+      return mine.some((ws) => ws.id === m.workspace_id) && start <= Date.now() && start >= monthAgo
+    })
+
+    return HttpResponse.json({
+      rating_avg: mentor?.rating_avg ?? null,
+      reviews_count: mentor?.reviews_count ?? 0,
+      active_students: active,
+      max_students: max,
+      free_slots: Math.max(max - active, 0),
+      completed_pairs: mine.length - active,
+      meetings_this_month: meetings.length,
+    })
+  }),
+
+  http.get(`${API}/mentors/me/reviews`, ({ request }) => {
+    const user = currentUser(request)
+    if (!user) return unauthorized()
+    if (user.role !== 'mentor') return error(403, 'FORBIDDEN', 'Mentors only')
+    const items = REVIEWS[MENTOR_ID_BY_USER[user.id]] ?? []
+    const limit = Number(new URL(request.url).searchParams.get('limit') ?? 10)
+    return HttpResponse.json({ total: items.length, page: 1, items: items.slice(0, limit) })
+  }),
+
+  http.get(`${API}/calendar`, ({ request }) => {
+    const user = currentUser(request)
+    if (!user) return unauthorized()
+
+    const params = new URL(request.url).searchParams
+    const start = Date.parse(`${params.get('from')}T00:00:00+05:00`)
+    const end = Date.parse(`${params.get('to')}T23:59:59+05:00`)
+    if (Number.isNaN(start) || Number.isNaN(end) || end < start) {
+      return error(400, 'VALIDATION_ERROR', 'from and to must be valid dates')
+    }
+    if (end - start > 62 * DAY) {
+      return error(400, 'VALIDATION_ERROR', 'Period must be at most 62 days')
+    }
+
+    const mine = store.workspaces.filter((ws) => isMember(user, ws))
+    const inRange = (iso: string) => {
+      const time = Date.parse(iso)
+      return time >= start && time <= end
+    }
+
+    const meetings = store.meetings
+      .filter((m) => inRange(m.start_time))
+      .sort((x, y) => x.start_time.localeCompare(y.start_time))
+      .flatMap((m) => {
+        const ws = mine.find((w) => w.id === m.workspace_id)
+        return ws ? [meetingResponse(m, ws, user)] : []
+      })
+
+    const task_deadlines = store.tasks
+      .filter((t) => inRange(t.deadline_at) && mine.some((ws) => ws.id === t.workspace_id))
+      .map((t) => ({
+        task_id: t.id,
+        workspace_id: t.workspace_id,
+        title: t.title,
+        deadline_at: t.deadline_at,
+        status: t.status,
+      }))
+
+    return HttpResponse.json({ meetings, task_deadlines, partners_availability: [] })
+  }),
+
   http.get(`${API}/workspaces`, ({ request }) => {
     const user = currentUser(request)
     if (!user) return unauthorized()
@@ -127,11 +230,79 @@ export const workspaceHandlers = [
     const tasks = store.tasks
       .filter((t) => t.workspace_id === a.ws.id)
       .sort((x, y) => x.deadline_at.localeCompare(y.deadline_at))
-      .map(({ workspace_id, ...task }) => ({
-        ...task,
-        comments_count: store.comments.filter((c) => c.task_id === task.id).length,
-      }))
+      .map(taskResponse)
     return HttpResponse.json(tasks)
+  }),
+
+  http.post(`${API}/workspaces/:id/tasks`, async ({ params, request }) => {
+    const a = access(request, String(params.id))
+    if ('fail' in a) return a.fail
+    if (a.user.role !== 'mentor') return error(403, 'FORBIDDEN', 'Only the mentor can create tasks')
+
+    const body = (await request.json()) as {
+      title?: string
+      description?: string
+      deadline_at?: string
+    }
+    const title = body.title?.trim() ?? ''
+    if (!title) return error(400, 'VALIDATION_ERROR', 'title is required')
+    if (!isDate(body.deadline_at)) return error(400, 'VALIDATION_ERROR', 'deadline_at is required')
+
+    const now = new Date().toISOString()
+    const task: MockTask = {
+      id: `t-${Date.now()}`,
+      workspace_id: a.ws.id,
+      title,
+      description: body.description?.trim() || undefined,
+      status: 'todo',
+      deadline_at: body.deadline_at as string,
+      created_at: now,
+      updated_at: now,
+      completed_at: null,
+    }
+    store.tasks.push(task)
+    saveStore()
+    return HttpResponse.json(taskResponse(task), { status: 201 })
+  }),
+
+  http.patch(`${API}/tasks/:taskId`, async ({ params, request }) => {
+    const task = store.tasks.find((t) => t.id === params.taskId)
+    if (!task) return error(404, 'NOT_FOUND', 'Task not found')
+    const a = access(request, task.workspace_id)
+    if ('fail' in a) return a.fail
+    if (a.user.role !== 'mentor') return error(403, 'FORBIDDEN', 'Only the mentor can edit tasks')
+
+    const body = (await request.json()) as {
+      title?: string
+      description?: string
+      deadline_at?: string
+    }
+    if (body.title !== undefined && !body.title.trim()) {
+      return error(400, 'VALIDATION_ERROR', 'title cannot be empty')
+    }
+    if (body.deadline_at !== undefined && !isDate(body.deadline_at)) {
+      return error(400, 'VALIDATION_ERROR', 'deadline_at is invalid')
+    }
+
+    if (body.title !== undefined) task.title = body.title.trim()
+    if (body.description !== undefined) task.description = body.description.trim() || undefined
+    if (body.deadline_at !== undefined) task.deadline_at = body.deadline_at
+    task.updated_at = new Date().toISOString()
+    saveStore()
+    return HttpResponse.json(taskResponse(task))
+  }),
+
+  http.delete(`${API}/tasks/:taskId`, ({ params, request }) => {
+    const task = store.tasks.find((t) => t.id === params.taskId)
+    if (!task) return error(404, 'NOT_FOUND', 'Task not found')
+    const a = access(request, task.workspace_id)
+    if ('fail' in a) return a.fail
+    if (a.user.role !== 'mentor') return error(403, 'FORBIDDEN', 'Only the mentor can delete tasks')
+
+    store.tasks = store.tasks.filter((t) => t.id !== task.id)
+    store.comments = store.comments.filter((c) => c.task_id !== task.id)
+    saveStore()
+    return new HttpResponse(null, { status: 204 })
   }),
 
   http.patch(`${API}/tasks/:taskId/status`, async ({ params, request }) => {
@@ -156,12 +327,7 @@ export const workspaceHandlers = [
     if (body.mentor_comment !== undefined) task.mentor_comment = body.mentor_comment
     task.completed_at = body.status === 'completed' ? now : null
     saveStore()
-
-    const { workspace_id, ...rest } = task
-    return HttpResponse.json({
-      ...rest,
-      comments_count: store.comments.filter((c) => c.task_id === task.id).length,
-    })
+    return HttpResponse.json(taskResponse(task))
   }),
 
   http.get(`${API}/tasks/:taskId/comments`, ({ params, request }) => {
@@ -209,6 +375,59 @@ export const workspaceHandlers = [
     return HttpResponse.json(meetings)
   }),
 
+  http.post(`${API}/workspaces/:id/meetings`, async ({ params, request }) => {
+    const a = access(request, String(params.id))
+    if ('fail' in a) return a.fail
+
+    const body = (await request.json()) as {
+      title?: string
+      start_time?: string
+      end_time?: string
+    }
+    if (!isDate(body.start_time)) return error(400, 'VALIDATION_ERROR', 'start_time is required')
+    if (body.end_time && (!isDate(body.end_time) || body.end_time <= (body.start_time as string))) {
+      return error(400, 'VALIDATION_ERROR', 'end_time must be after start_time')
+    }
+
+    const meeting: MockMeeting = {
+      id: `m-${Date.now()}`,
+      workspace_id: a.ws.id,
+      title: body.title?.trim() || 'Встреча',
+      start_time: body.start_time as string,
+      end_time: body.end_time,
+      reviews: {},
+    }
+    store.meetings.push(meeting)
+    addSystemMessage(a.ws.id, `Встреча назначена: ${formatMeetingTime(meeting.start_time)}`)
+    saveStore()
+    return HttpResponse.json(meetingResponse(meeting, a.ws, a.user), { status: 201 })
+  }),
+
+  http.patch(`${API}/meetings/:meetingId`, async ({ params, request }) => {
+    const meeting = store.meetings.find((m) => m.id === params.meetingId)
+    if (!meeting) return error(404, 'NOT_FOUND', 'Meeting not found')
+    const a = access(request, meeting.workspace_id)
+    if ('fail' in a) return a.fail
+
+    const body = (await request.json()) as {
+      title?: string
+      start_time?: string
+      end_time?: string
+    }
+    if (body.start_time !== undefined && !isDate(body.start_time)) {
+      return error(400, 'VALIDATION_ERROR', 'start_time is invalid')
+    }
+
+    if (body.title !== undefined) meeting.title = body.title.trim() || 'Встреча'
+    if (body.start_time !== undefined) meeting.start_time = body.start_time
+    if (body.end_time !== undefined) meeting.end_time = body.end_time
+    if (body.start_time !== undefined) {
+      addSystemMessage(a.ws.id, `Встреча перенесена: ${formatMeetingTime(meeting.start_time)}`)
+    }
+    saveStore()
+    return HttpResponse.json(meetingResponse(meeting, a.ws, a.user))
+  }),
+
   http.post(`${API}/meetings/:meetingId/reviews`, async ({ params, request }) => {
     const meeting = store.meetings.find((m) => m.id === params.meetingId)
     if (!meeting) return error(404, 'NOT_FOUND', 'Meeting not found')
@@ -239,6 +458,56 @@ export const workspaceHandlers = [
       },
       { status: 201 },
     )
+  }),
+
+  http.get(`${API}/workspaces/:id/messages`, ({ params, request }) => {
+    const a = access(request, String(params.id))
+    if ('fail' in a) return a.fail
+
+    const search = new URL(request.url).searchParams
+    const before = search.get('before')
+    const limit = Math.min(Number(search.get('limit') ?? 50), 100)
+
+    const messages = store.messages
+      .filter((m) => m.workspace_id === a.ws.id && (!before || m.created_at < before))
+      .sort((x, y) => x.created_at.localeCompare(y.created_at))
+      .slice(-limit)
+      .map(messageResponse)
+    return HttpResponse.json(messages)
+  }),
+
+  http.post(`${API}/workspaces/:id/messages`, async ({ params, request }) => {
+    const a = access(request, String(params.id))
+    if ('fail' in a) return a.fail
+
+    const body = (await request.json()) as { text?: string; file_id?: string }
+    const text = body.text?.trim() ?? ''
+    if (!text && !body.file_id) return error(400, 'VALIDATION_ERROR', 'text or file_id is required')
+    if (text.length > 4000) return error(400, 'VALIDATION_ERROR', 'text is too long')
+
+    const message: MockMessage = {
+      id: `msg-${Date.now()}`,
+      workspace_id: a.ws.id,
+      type: 'text',
+      sender_id: a.user.id,
+      text: text || null,
+      file_id: body.file_id ?? null,
+      read: false,
+      created_at: new Date().toISOString(),
+    }
+    store.messages.push(message)
+    saveStore()
+    return HttpResponse.json(messageResponse(message), { status: 201 })
+  }),
+
+  http.post(`${API}/workspaces/:id/messages/read`, ({ params, request }) => {
+    const a = access(request, String(params.id))
+    if ('fail' in a) return a.fail
+    store.messages.forEach((m) => {
+      if (m.workspace_id === a.ws.id && m.sender_id !== a.user.id) m.read = true
+    })
+    saveStore()
+    return new HttpResponse(null, { status: 204 })
   }),
 
   http.get(`${API}/workspaces/:id/files`, ({ params, request }) => {
