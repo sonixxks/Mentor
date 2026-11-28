@@ -68,3 +68,10 @@ export function greeting() {
   if (hour >= 18 && hour < 23) return 'Добрый вечер'
   return 'Доброй ночи'
 }
+
+export function sentLabel(iso: string) {
+  const day = ekbDate(iso)
+  if (day === todayEkb()) return `сегодня, ${formatTime(iso)}`
+  if (day === todayEkb(-1)) return 'вчера'
+  return formatDate(iso)
+}
