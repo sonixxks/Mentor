@@ -99,6 +99,10 @@ func (b *mailbox) SendVerificationCode(_ context.Context, email, code string) er
 	return nil
 }
 
+func (b *mailbox) SendPasswordResetCode(ctx context.Context, email, code string) error {
+	return b.SendVerificationCode(ctx, email, code)
+}
+
 func (b *mailbox) last(email string) string {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -135,6 +139,9 @@ func newEnv(t *testing.T) env {
 		ResendLimiter: memory.NewResendLimiter(),
 		Mailer:        box,
 		Codes:         auth.RandomCodeGenerator{},
+
+		PasswordResets: memory.NewPasswordResetStore(),
+		ResetMailer:    box,
 	}, auth.Settings{
 		CodeSettings: auth.CodeSettings{
 			// Короткий интервал, чтобы проверить повторную отправку без долгого ожидания.

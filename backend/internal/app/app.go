@@ -84,6 +84,8 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 		return fmt.Errorf("create password hasher: %w", err)
 	}
 
+	devMailer := mailer.NewLogMailer(lg)
+
 	//services
 
 	authService := auth.NewService(
@@ -96,8 +98,11 @@ func Run(ctx context.Context, lg *slog.Logger, cfg *config.Config) error {
 			Transactions:  transactionManager,
 			Registrations: memory.NewRegistrationStore(),
 			ResendLimiter: memory.NewResendLimiter(),
-			Mailer:        mailer.NewLogMailer(lg),
+			Mailer:        devMailer,
 			Codes:         auth.RandomCodeGenerator{},
+
+			PasswordResets: memory.NewPasswordResetStore(),
+			ResetMailer:    devMailer,
 		},
 		auth.Settings{CodeSettings: codeSettings, RefreshTokenSettings: refreshTokenSettings},
 	)

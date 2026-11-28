@@ -30,6 +30,9 @@ type AuthService interface {
 	Login(ctx context.Context, req LoginRequest) (TokenPair, error)
 	ResendCode(ctx context.Context, req ResendCodeRequest) (RegisterResult, error)
 	Refresh(ctx context.Context, req RefreshRequest) (TokenPair, error)
+	ForgotPassword(ctx context.Context, req ForgotPasswordRequest) (RegisterResult, error)
+	VerifyResetCode(ctx context.Context, req VerifyResetCodeRequest) error
+	ResetPassword(ctx context.Context, req ResetPasswordRequest) (TokenPair, error)
 }
 
 func (h *AuthHandler) handleRegister(w http.ResponseWriter, r *http.Request) {
@@ -102,6 +105,67 @@ func (h *AuthHandler) Register(mux *http.ServeMux) {
 	//Login
 	mux.HandleFunc("POST /auth/login", h.handleLogin)
 	mux.HandleFunc("POST /auth/refresh", h.handleRefresh)
+
+	//Password reset
+	mux.HandleFunc("POST /auth/password/forgot", h.handleForgotPassword)
+	mux.HandleFunc("POST /auth/password/verify-code", h.handleVerifyResetCode)
+	mux.HandleFunc("POST /auth/password/reset", h.handleResetPassword)
+}
+
+func (h *AuthHandler) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req ForgotPasswordRequest
+	if !httpx.ReadBodyWithLimit(w, r, &req) {
+		return
+	}
+	req.Email = normalizeEmail(req.Email)
+	if err := h.validate.Struct(req); err != nil {
+		httpx.SendValidationErrors(w, err, http.StatusBadRequest)
+		return
+	}
+	res, err := h.authService.ForgotPassword(r.Context(), req)
+	if err != nil {
+		h.writeError(w, r, "password-forgot", err)
+		return
+	}
+	httpx.SendJSON(w, http.StatusOK, CodeSentResponse{
+		ExpiresInSeconds:   int(res.CodeExpiresIn.Seconds()),
+		ResendAfterSeconds: int(res.ResendAfter.Seconds()),
+	})
+}
+
+func (h *AuthHandler) handleVerifyResetCode(w http.ResponseWriter, r *http.Request) {
+	var req VerifyResetCodeRequest
+	if !httpx.ReadBodyWithLimit(w, r, &req) {
+		return
+	}
+	req.Email = normalizeEmail(req.Email)
+	if err := h.validate.Struct(req); err != nil {
+		httpx.SendValidationErrors(w, err, http.StatusBadRequest)
+		return
+	}
+	if err := h.authService.VerifyResetCode(r.Context(), req); err != nil {
+		h.writeError(w, r, "password-verify-code", err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *AuthHandler) handleResetPassword(w http.ResponseWriter, r *http.Request) {
+	var req ResetPasswordRequest
+	if !httpx.ReadBodyWithLimit(w, r, &req) {
+		return
+	}
+	req.Email = normalizeEmail(req.Email)
+	if err := h.validate.Struct(req); err != nil {
+		httpx.SendValidationErrors(w, err, http.StatusBadRequest)
+		return
+	}
+	pair, err := h.authService.ResetPassword(r.Context(), req)
+	if err != nil {
+		h.writeError(w, r, "password-reset", err)
+		return
+	}
+	httpx.SendJSON(w, http.StatusOK, TokenResponse{AccessToken: pair.AccessToken, RefreshToken: pair.RefreshToken})
 }
 
 func (h *AuthHandler) handleResendCode(w http.ResponseWriter, r *http.Request) {
